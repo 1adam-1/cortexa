@@ -1,4 +1,5 @@
 import os
+import random
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -7,8 +8,9 @@ from generation.qa import build_context, generate_answer
 from generation.qcm import generate_qcm
 from generation.questions import ask_question
 from generation.summary import generate_summary
+from rag.chunking import chunk_text_by_tokens
 from rag.embeddings import compute_embeddings, load_embedding_models
-from rag.ingestion import chunk_pages, extract_pages_from_pdf
+from rag.ingestion import extract_elements
 from rag.retrieval import rerank_chunks, retrieve_top_chunks
 from storage.index import (
     create_faiss_index,
@@ -63,36 +65,69 @@ def main():
         elif os.path.exists(chunks_path) and not os.path.exists(index_path):
             print("chunks.pkl found but index.faiss missing, rebuilding index...")
 
-        pages = extract_pages_from_pdf(path)
-        chunks = chunk_pages(pages, tokenizer)
-        chunk_embeddings = compute_embeddings(chunks, embedding_model)
+        sections = extract_elements(path)
+        chunks = chunk_text_by_tokens(sections, tokenizer, max_tokens=500, min_tokens=50, overlap=50)
+        chunk_embeddings = compute_embeddings([c for c in chunks], embedding_model)
         index = create_faiss_index(chunk_embeddings)
         save_index(index, index_path)
         save_chunks(chunks, chunks_path)
 
     while True:
+        print("\n\n ***********MENU***********\n\n")
+        
         choice = menu()
-
         if choice == "1":
             question = input("Entre ta question: ").strip()
             candidates = retrieve_top_chunks(question, chunks, index, embedding_model)
             top_chunks = rerank_chunks(question, candidates, reranker)
-            context = build_context(top_chunks, question, tokenizer)
+            context = build_context(top_chunks, tokenizer, question)
             answer = generate_answer(context, question, tokenizer, generation_model)
             print("Question :", question)
-            print("Answer :", answer)
+            print("Réponse :", answer)
 
         elif choice == "2":
-            summary = generate_summary(chunks, tokenizer, generation_model)
+            random_chunks = random.sample(chunks, min(len(chunks), 5))
+            summary_prompt = f"""
+                            [INST]
+                            Résume le contenu suivant pour un étudiant.
+
+                            Concentre-toi sur :
+                            - concepts clés
+                            - définitions importantes
+                            - idées principales
+
+                            Contexte :
+                          
+                            [/INST]
+                            """
+            context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=summary_prompt)
+            summary = generate_summary(tokenizer, generation_model, context)
             print("Summary :\n", summary)
 
         elif choice == "3":
-            context = build_context(chunks[:8], "Genere un QCM", tokenizer)
+            random_chunks = random.sample(chunks, min(len(chunks), 8))
+            qcm_prompt = f"""
+            [INST]
+            Genere 5 questions a choix multiples a partir du contexte suivant.
+
+            Contexte:
+
+            [/INST]
+            """
+            context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=qcm_prompt)
             qcm = generate_qcm(context, tokenizer, generation_model)
             print("QCM :\n", qcm)
 
         elif choice == "4":
-            context = build_context(chunks[:8], "Genere des questions ouvertes", tokenizer)
+            random_chunks = random.sample(chunks, min(len(chunks), 5))
+            open_questions_prompt = f"""
+            [INST]
+            Genere 3 questions ouvertes qui evaluent la comprehension.
+            Contexte:
+
+            [/INST]
+            """
+            context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=open_questions_prompt)
             questions = ask_question(context, tokenizer, generation_model)
             print("Questions :\n", questions)
 

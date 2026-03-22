@@ -1,14 +1,22 @@
 def generate_qcm(context, tokenizer, generation_model, max_new_tokens=500):
     prompt = f"""
 [INST]
-Generate 5 multiple choice questions based on the following context.
+Genere 5 questions a choix multiples a partir du contexte suivant.
 
-Context:
+Contexte:
 {context}
 
-Each question must contain:
+Chaque question doit contenir :
 - 4 options
-- 1 correct answer
+- 1 bonne reponse
+
+Retourne le resultat au format JSON :
+
+{{
+ "question": "",
+ "options": ["","","",""],
+ "answer": ""
+}}
 [/INST]
 """
 

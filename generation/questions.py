@@ -1,8 +1,8 @@
 def ask_question(context, tokenizer, generation_model, max_new_tokens=200):
     prompt = f"""
 [INST]
-Generate 3 open-ended questions that test understanding.
-Context:
+Genere 3 questions ouvertes qui evaluent la comprehension.
+Contexte :
 {context}
 [/INST]
 """

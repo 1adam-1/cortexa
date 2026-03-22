@@ -8,8 +8,9 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def build_context(chunks, question, tokenizer, budget_input=DEFAULT_BUDGET_INPUT):
-    prompt = f"""
+def build_context(chunks, tokenizer, question=None, budget_input=DEFAULT_BUDGET_INPUT, prompt=None):
+    if prompt is None:
+        prompt = f"""
 [INST]
 Tu es un assistant RAG.
 

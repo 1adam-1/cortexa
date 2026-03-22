@@ -1,3 +1,6 @@
-import torch
-print(torch.cuda.is_available())
-print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No GPU")
+from unstructured.partition.pdf import partition_pdf
+
+elements = partition_pdf("ml.pdf")
+
+for el in elements:
+    print(el, "*****************\n\n")

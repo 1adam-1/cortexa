@@ -1,35 +1,46 @@
-import pdfplumber
+from unstructured.partition.auto import partition
+from unstructured.documents.elements import (
+    Title, NarrativeText, ListItem, Table
+)
 
-from rag.chunking import chunk_text_by_tokens
+def extract_elements(file_path):
+    elements = partition(file_path)
 
+    if not elements or sum(len(e.text or "") for e in elements) < 100:
+        elements = partition(file_path, strategy="hi_res")
 
-def extract_pages_from_pdf(path):
-    pages = []
-    with pdfplumber.open(path) as pdf:
-        for i, page in enumerate(pdf.pages):
-            text = page.extract_text()
-            if text:
-                pages.append(
-                    {
-                        "text": text,
-                        "source": path,
-                        "page": i + 1,
-                    }
-                )
-    return pages
+    structured_output = []
 
+    current_section = {
+        "title": None,
+        "text": []
+    }
 
-def chunk_pages(pages, tokenizer):
-    all_chunks = []
+    for el in elements:
+        text = el.text.strip() if el.text else ""
 
-    for page in pages:
-        chunks = chunk_text_by_tokens(page["text"], tokenizer)
-        for chunk in chunks:
-            all_chunks.append(
-                {
-                    "text": chunk,
-                    "source": page["source"],
-                    "page": page["page"],
-                }
-            )
-    return all_chunks
+        if not text:
+            continue
+
+        if isinstance(el, Title):
+            if current_section["text"]:
+                structured_output.append(current_section)
+
+            current_section = {
+                "title": text,
+                "text": []
+            }
+
+        elif isinstance(el, NarrativeText):
+            current_section["text"].append(text)
+
+        elif isinstance(el, ListItem):
+            current_section["text"].append(f"- {text}")
+
+        elif isinstance(el, Table):
+            current_section["text"].append(f"[TABLE]\n{text}")
+
+    if current_section["text"]:
+        structured_output.append(current_section)
+
+    return structured_output

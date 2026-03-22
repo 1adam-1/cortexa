@@ -2,44 +2,65 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def chunk_text_by_tokens(
-    text,
-    tokenizer,
-    target_tokens=900,
-    min_tokens=120,
-    overlap_ratio=0.15,
-):
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
+def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, overlap=1):
 
-    chunks = []
-    current_chunk = []
-    current_tokens = 0
+    chunks=[]
+    for section in sections:
+        title = section["title"] or "Untitled"
+        items = section["text"]
 
-    for para in paragraphs:
-        tokens = tokenizer.encode(para, add_special_tokens=False)
-        token_len = len(tokens)
+        current_chunk = []
+        current_token = 0
 
-        if token_len < 5:
-            continue
+        for item in items:
+            token_length = count_tokens(item, tokenizer)
 
-        if current_tokens + token_len <= target_tokens:
-            current_chunk.append(para)
-            current_tokens += token_len
-        else:
-            chunk_text = "\n".join(current_chunk)
+            if item.startswith("[TABLE]"):
+                if current_chunk:
+                    chunks.append({
+                        "title": title,
+                        "text": "\n".join(current_chunk)
+                    })
+                    current_chunk = []
+                    current_token = 0
 
-            if current_tokens >= min_tokens:
-                chunks.append(chunk_text)
+                chunks.append({
+                    "title": title,
+                    "text": item
+                })
+                continue
 
-            overlap_tokens = int(target_tokens * overlap_ratio)
-            overlap_text = tokenizer.decode(tokenizer.encode(chunk_text)[-overlap_tokens:])
+            if current_token + token_length <= max_tokens:
+                current_chunk.append(item)
+                current_token += token_length
 
-            current_chunk = [overlap_text, para]
-            current_tokens = count_tokens(overlap_text, tokenizer) + token_len
+            else:
+                if current_token >= min_tokens:
+                    chunks.append({
+                        "title": title,
+                        "text": "\n".join(current_chunk)
+                    })
+                
+                if current_chunk:
+                    overlap_tokens = current_chunk[-overlap:]
 
-    if current_chunk:
-        chunk_text = "\n".join(current_chunk)
-        if count_tokens(chunk_text, tokenizer) >= min_tokens:
-            chunks.append(chunk_text)
+                    current_chunk = overlap_tokens + [item]
+                    current_token = sum( count_tokens(x, tokenizer) for x in current_chunk)
+
+    
+        if current_chunk and current_token >= min_tokens:
+            chunks.append({
+                "title": title,
+                "text": "\n".join(current_chunk)
+            })
 
     return chunks
+                
+
+        
+
+                    
+
+
+
+    

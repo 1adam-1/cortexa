@@ -17,10 +17,8 @@ def retrieve_top_chunks(question, chunks, index, embedding_model, k=40):
         chunk = chunks[indices[0][i]]
         score = scores[0][i]
         top_chunks.append(
-            {
+            {   "title": chunk["title"],
                 "text": chunk["text"],
-                "source": chunk["source"],
-                "page": chunk["page"],
                 "score": score,
             }
         )
