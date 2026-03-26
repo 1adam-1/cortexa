@@ -1,0 +1,85 @@
+.Notebooks {
+    padding: 2rem ;
+    min-height: 100vh;
+    margin-left: 5rem;
+}
+
+.header {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+    color: #0f0f0f;
+    font-size: 2rem;
+    font-weight: 700;
+    background-clip: text;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    margin: 0.75rem 0 0 0;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+
+.cardHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1.5rem 1.5rem;
+}
+
+.iconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(100, 200, 255, 0.2) 0%, rgba(200, 150, 255, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.createCard .iconWrapper {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(103, 103, 103, 0.1) 100%);
+}
+
+.createCard .icon {
+    color: rgb(0, 0, 0);
+}
+
+.createButton {
+    width: 200%;
+    background: #0f0f0f;
+    color: #e5e7eb;
+    font-weight: 600;
+    border: none;
+    height: 40px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.createButton:hover {
+    background: #e5e7eb;
+    color: #0f0f0f;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(100, 200, 255, 0.3);
+}

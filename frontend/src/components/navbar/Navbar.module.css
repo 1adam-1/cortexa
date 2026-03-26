@@ -1,0 +1,55 @@
+.header {
+    --nav-height: 56px;
+    --nav-bg: #ffffff;
+    --nav-border: #e5e7eb;
+    --icon-color: #6b7280;
+    --icon-hover-bg: #f3f4f6;
+    --icon-hover-color: #111827;
+
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid #e5e7eb;
+    height: 56px;
+}
+
+.inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    margin-right: auto;
+}
+
+.logo {
+    height: 70px;
+    width: auto;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-right: 1rem;
+}
+
+.iconBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    border-radius: 8px;
+    color: var(--icon-color);
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.iconBtn:hover {
+    background: var(--icon-hover-bg);
+    color: var(--icon-hover-color);
+}

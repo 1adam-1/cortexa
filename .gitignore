@@ -45,3 +45,6 @@ Thumbs.db
 # Project-generated artifacts
 *.faiss
 *.pkl
+
+#frontend
+./frontend/node_modules
