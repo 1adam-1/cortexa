@@ -2,19 +2,10 @@ def generate_summary( tokenizer, generation_model, context):
 
     
 
-    prompt = f"""
-    [INST]
-    Résume le contenu suivant pour un étudiant.
-
-    Concentre-toi sur :
-    - concepts clés
-    - définitions importantes
-    - idées principales
-
-    Contexte :
-    {context}
-    [/INST]
-    """
+    messages = [
+        {"role": "user", "content": f"Résume le contenu suivant pour un étudiant.\n\nConcentre-toi sur :\n- concepts clés\n- définitions importantes\n- idées principales\n\nContexte :\n{context}"}
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     inputs = tokenizer(prompt, return_tensors="pt").to(generation_model.device)
     outputs= generation_model.generate(

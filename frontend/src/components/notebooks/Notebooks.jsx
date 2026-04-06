@@ -1,4 +1,5 @@
 import { Button } from '../ui/button.tsx';
+import { useState } from 'react';
 import {
     Card,
     CardDescription,
@@ -18,6 +19,43 @@ import {
 } from "@/components/ui/dialog";
 
 export default function Notebooks() {
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const handleFileChange = (event) => {
+        if (event.target.files && event.target.files[0]) {
+            setSelectedFile(event.target.files[0]);
+        }
+    };
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            alert("Veuillez d'abord sélectionner un fichier.");
+            return;
+        }
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert("Fichier envoyé avec succès au RAG !");
+                console.log(data);
+                setSelectedFile(null);
+            } else {
+                alert(`Erreur : ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Erreur lors de l'envoi :", error);
+            alert("Erreur de connexion avec le serveur.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     return (
         <div className={classes.Notebooks}>
             <div className={classes.header}>
@@ -49,20 +87,23 @@ export default function Notebooks() {
                                 </Button>
                             </DialogTrigger>
 
-                            <DialogContent className="sm:max-w-md">
+                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
                                     <DialogTitle>Upload Files</DialogTitle>
                                 </DialogHeader>
-
                                 <div className="flex flex-col gap-4">
                                     <input
                                         type="file"
-                                        className="border p-2 rounded-md h-56"
+                                        className="border p-2 rounded-md h-56 cursor-pointer"
                                         id="fileUpload"
+                                        onChange={handleFileChange} 
                                     />
-
-
-                                    <Button>Upload</Button>
+                                    <Button 
+                                        onClick={handleUpload} 
+                                        disabled={isUploading || !selectedFile}  
+                                    >
+                                        {isUploading ? "Uploading..." : "Upload au RAG"}
+                                    </Button>
                                 </div>
                             </DialogContent>
                         </Dialog>

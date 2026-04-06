@@ -7,7 +7,9 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
     chunks=[]
     for section in sections:
         title = section["title"] or "Untitled"
+        type = section.get("type",[])
         items = section["text"]
+        pages = section.get("pages", [])
 
         current_chunk = []
         current_token = 0
@@ -19,14 +21,18 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
                 if current_chunk:
                     chunks.append({
                         "title": title,
-                        "text": "\n".join(current_chunk)
+                        "type": type,
+                        "text": "\n".join(current_chunk),
+                        "pages": pages,
                     })
                     current_chunk = []
                     current_token = 0
 
                 chunks.append({
                     "title": title,
-                    "text": item
+                    "type": type,
+                    "text": item,
+                    "pages": pages,
                 })
                 continue
 
@@ -38,7 +44,9 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
                 if current_token >= min_tokens:
                     chunks.append({
                         "title": title,
-                        "text": "\n".join(current_chunk)
+                        "type": type,
+                        "text": "\n".join(current_chunk),
+                        "pages": pages,
                     })
                 
                 if current_chunk:
@@ -51,7 +59,9 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
         if current_chunk and current_token >= min_tokens:
             chunks.append({
                 "title": title,
-                "text": "\n".join(current_chunk)
+                "type": type,
+                "text": "\n".join(current_chunk),
+                "pages": pages,
             })
 
     return chunks

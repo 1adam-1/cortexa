@@ -1,0 +1,22 @@
+.wrapper{
+    display: flex;
+}
+
+.discussion {
+    width: 60%;
+    margin: 1rem;
+    border: 1px solid #333;
+    border-radius: 10px;
+}
+
+.studio{
+    width: 30%;
+    margin: 1rem;
+    border: 1px solid #333;
+    border-radius: 10px;
+}
+
+.discussionHeader{
+    padding: 0.3rem;
+    border-bottom: 1px solid #c1c1c1;
+}

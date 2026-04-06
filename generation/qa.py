@@ -10,22 +10,29 @@ def count_tokens(text, tokenizer):
 
 def build_context(chunks, tokenizer, question=None, budget_input=DEFAULT_BUDGET_INPUT, prompt=None):
     if prompt is None:
-        prompt = f"""
-[INST]
-Tu es un assistant RAG.
+        messages = [
+            {
+        "role": "system",
+        "content": """Tu es un assistant RAG strict.
 
-Reponds uniquement avec les informations du contexte.
-Si l'information n'est pas dans le contexte, dis \"Je ne sais pas\".
+        RÈGLES OBLIGATOIRES :
+        1. Réponds UNIQUEMENT avec les informations présentes dans le contexte.
+        2. Si la réponse n'est pas explicitement dans le contexte, réponds EXACTEMENT : "Je ne sais pas".
+        3. N'invente rien. N'utilise aucune connaissance externe.
+        4. Cite les passages du contexte utilisés si possible.
+        5. Réponds en français."""
+    },
+       {
+        "role": "user",
+        "content": f"""QUESTION:
+        {question}
 
-Reponds en francais.
+        CONTEXTE:
 
-Question:
-{question}
-
-Contexte:
-
-[/INST]
-"""
+        RÉPONSE:"""
+    }
+        ]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     total_tokens = count_tokens(prompt, tokenizer)
     context_parts = []
@@ -44,22 +51,30 @@ Contexte:
 
 
 def generate_answer(context, question, tokenizer, generation_model, max_new_tokens=200):
-    prompt = f"""
-[INST]
-Tu es un assistant RAG.
+    messages = [
+    {
+        "role": "system",
+        "content": """Tu es un assistant RAG strict.
 
-Reponds uniquement avec les informations du contexte.
-Si l'information n'est pas dans le contexte, dis \"Je ne sais pas\".
+        RÈGLES OBLIGATOIRES :
+        1. Réponds UNIQUEMENT avec les informations présentes dans le contexte.
+        2. Si la réponse n'est pas explicitement dans le contexte, réponds EXACTEMENT : "Je ne sais pas".
+        3. N'invente rien. N'utilise aucune connaissance externe.
+        4. Cite les passages du contexte utilisés si possible.
+        5. Réponds en français."""
+    },
+    {
+        "role": "user",
+        "content": f"""QUESTION:
+        {question}
 
-Reponds en francais.
+        CONTEXTE:
+        {context}
 
-Question:
-{question}
-
-Contexte:
-{context}
-[/INST]
-"""
+        RÉPONSE:"""
+    }
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     inputs = tokenizer(prompt, return_tensors="pt").to(generation_model.device)
 

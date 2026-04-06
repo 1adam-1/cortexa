@@ -23,7 +23,7 @@ from storage.index import (
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
-def load_generation_model(model_id="mistralai/Mistral-7B-Instruct-v0.2"):
+def load_generation_model(model_id="meta-llama/Meta-Llama-3.1-8B-Instruct"):
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
@@ -88,7 +88,6 @@ def main():
         elif choice == "2":
             random_chunks = random.sample(chunks, min(len(chunks), 5))
             summary_prompt = f"""
-                            [INST]
                             Résume le contenu suivant pour un étudiant.
 
                             Concentre-toi sur :
@@ -97,8 +96,6 @@ def main():
                             - idées principales
 
                             Contexte :
-                          
-                            [/INST]
                             """
             context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=summary_prompt)
             summary = generate_summary(tokenizer, generation_model, context)
@@ -107,12 +104,9 @@ def main():
         elif choice == "3":
             random_chunks = random.sample(chunks, min(len(chunks), 8))
             qcm_prompt = f"""
-            [INST]
             Genere 5 questions a choix multiples a partir du contexte suivant.
 
             Contexte:
-
-            [/INST]
             """
             context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=qcm_prompt)
             qcm = generate_qcm(context, tokenizer, generation_model)
@@ -121,11 +115,8 @@ def main():
         elif choice == "4":
             random_chunks = random.sample(chunks, min(len(chunks), 5))
             open_questions_prompt = f"""
-            [INST]
             Genere 3 questions ouvertes qui evaluent la comprehension.
             Contexte:
-
-            [/INST]
             """
             context = build_context(chunks=random_chunks, tokenizer=tokenizer, question="", prompt=open_questions_prompt)
             questions = ask_question(context, tokenizer, generation_model)

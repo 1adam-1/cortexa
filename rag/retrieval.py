@@ -14,6 +14,8 @@ def retrieve_top_chunks(question, chunks, index, embedding_model, k=40):
 
     top_chunks = []
     for i in range(k):
+        if indices[0][i] == -1:
+            continue
         chunk = chunks[indices[0][i]]
         score = scores[0][i]
         top_chunks.append(
