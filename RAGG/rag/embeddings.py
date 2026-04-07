@@ -5,7 +5,7 @@ from sentence_transformers import CrossEncoder, SentenceTransformer
 
 def load_embedding_models():
     embedding_model = SentenceTransformer(
-        "BAAI/bge-base-en-v1.5",
+        "BAAI/bge-m3",
         device="cuda" if torch.cuda.is_available() else "cpu",
     )
     reranker = CrossEncoder("BAAI/bge-reranker-base")

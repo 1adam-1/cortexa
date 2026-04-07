@@ -4,15 +4,15 @@ import random
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-from generation.qa import build_context, generate_answer
-from generation.qcm import generate_qcm
-from generation.questions import ask_question
-from generation.summary import generate_summary
-from rag.chunking import chunk_text_by_tokens
-from rag.embeddings import compute_embeddings, load_embedding_models
-from rag.ingestion import extract_elements
-from rag.retrieval import rerank_chunks, retrieve_top_chunks
-from storage.index import (
+from RAGG.generation.qa import build_context, generate_answer
+from RAGG.generation.qcm import generate_qcm
+from RAGG.generation.questions import ask_question
+from RAGG.generation.summary import generate_summary
+from RAGG.rag.chunking import chunk_text_by_tokens
+from RAGG.rag.embeddings import compute_embeddings, load_embedding_models
+from RAGG.rag.ingestion import extract_elements
+from RAGG.rag.retrieval import rerank_chunks, retrieve_top_chunks
+from RAGG.storage.index import (
     create_faiss_index,
     load_chunks,
     load_index,
@@ -66,7 +66,7 @@ def main():
             print("chunks.pkl found but index.faiss missing, rebuilding index...")
 
         sections = extract_elements(path)
-        chunks = chunk_text_by_tokens(sections, tokenizer, max_tokens=500, min_tokens=50, overlap=50)
+        chunks = chunk_text_by_tokens(sections, tokenizer, max_tokens=500, min_tokens=50, overlap=1)
         chunk_embeddings = compute_embeddings([c for c in chunks], embedding_model)
         index = create_faiss_index(chunk_embeddings)
         save_index(index, index_path)

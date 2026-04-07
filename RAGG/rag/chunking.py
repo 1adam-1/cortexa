@@ -7,7 +7,7 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
     chunks=[]
     for section in sections:
         title = section["title"] or "Untitled"
-        type = section.get("type",[])
+        types = section.get("types",[])
         items = section["text"]
         pages = section.get("pages", [])
 
@@ -21,7 +21,7 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
                 if current_chunk:
                     chunks.append({
                         "title": title,
-                        "type": type,
+                        "types": types,
                         "text": "\n".join(current_chunk),
                         "pages": pages,
                     })
@@ -44,7 +44,7 @@ def chunk_text_by_tokens(sections, tokenizer, max_tokens=900, min_tokens=100, ov
                 if current_token >= min_tokens:
                     chunks.append({
                         "title": title,
-                        "type": type,
+                        "types": types,
                         "text": "\n".join(current_chunk),
                         "pages": pages,
                     })

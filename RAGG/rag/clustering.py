@@ -5,7 +5,7 @@ import hdbscan
 import faiss
 from sklearn.preprocessing import normalize
 
-MODEL_LIMIT = 4096
+MODEL_LIMIT = 8192
 MAX_OUTPUT = 300
 SAFETY_MARGIN = 50
 DEFAULT_BUDGET_INPUT = MODEL_LIMIT - MAX_OUTPUT - SAFETY_MARGIN
