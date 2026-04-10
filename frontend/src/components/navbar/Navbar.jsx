@@ -24,7 +24,7 @@ export function Navbar() {
                     </Link>
 
                     <Link
-                        to="/profile"
+                        to="/auth"
                         className={styles.iconBtn}
                         aria-label="Profile"
                     >
