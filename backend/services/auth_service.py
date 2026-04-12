@@ -26,7 +26,7 @@ def login_student(data):
 
     exist = Etudiant.query.filter_by(email=email).first()
     if not exist or not check_password_hash(exist.password, password):
-        return {'message': 'informations ivalides'}, 404
+        return {'message': 'informations invalides'}, 404
 
     access_token = create_access_token(identity=exist.id)
     
