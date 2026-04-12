@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 
 import faiss
-from backend.entities.models import Chunk_embedding, db
+from entities.models import Chunk_embedding, db
 
 
 def compute_embeddings(chunks, embedding_model):

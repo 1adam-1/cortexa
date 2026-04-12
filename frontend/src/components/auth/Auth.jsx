@@ -38,7 +38,7 @@ export default function Auth() {
         if(isLogin){
           localStorage.setItem("access_token", data.access_token);
           localStorage.setItem("user", JSON.stringify(data.user));
-          navigate("/");   
+          navigate("/Notebooks");   
         }
         else{
           setSuccessMsg(data.message || "Compte créé avec succès ! Connectez-vous.");

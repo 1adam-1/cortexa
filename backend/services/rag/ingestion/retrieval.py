@@ -1,5 +1,5 @@
 import faiss
-from backend.entities.models import Chunk
+from entities.models import Chunk
 
 def retrieve_top_chunks(question, chunks, index, embedding_model, k=40):
     

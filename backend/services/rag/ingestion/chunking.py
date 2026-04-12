@@ -1,4 +1,4 @@
-from backend.entities.models import Chunk, db
+from entities.models import Chunk, db
 
 def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))

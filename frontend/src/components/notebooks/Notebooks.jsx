@@ -21,38 +21,72 @@ import {
 export default function Notebooks() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    //upload file
     const handleFileChange = (event) => {
         if (event.target.files && event.target.files[0]) {
             setSelectedFile(event.target.files[0]);
         }
     };
+
     const handleUpload = async () => {
         if (!selectedFile) {
             alert("Veuillez d'abord sélectionner un fichier.");
             return;
         }
+        
         setIsUploading(true);
         try {
+            // STEP 1: Upload the file
             const formData = new FormData();
             formData.append("file", selectedFile);
-            const response = await fetch('/api/upload', {
+            
+            const token = localStorage.getItem("access_token");
+
+            const uploadResponse = await fetch('/api/upload', {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 body: formData,
             });
-            const data = await response.json();
+            const uploadData = await uploadResponse.json();
             
-            if (response.ok) {
-                alert("Fichier envoyé avec succès au RAG !");
-                console.log(data);
+            if (!uploadResponse.ok) {
+                alert(`Erreur d'upload : ${uploadData.message || uploadData.error}`);
+                return;
+            }
+
+            // STEP 2: Process the document using the ID returned
+            setIsUploading(false);
+            setIsProcessing(true); // Switch to processing state
+
+            const processResponse = await fetch('/api/processing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id_document: uploadData.id_document })
+            });
+
+            const processData = await processResponse.json();
+
+            if (processResponse.ok) {
+                alert("Fichier envoyé et traité avec succès au RAG !");
+                console.log(processData);
                 setSelectedFile(null);
             } else {
-                alert(`Erreur : ${data.error}`);
+                alert(`Erreur de traitement : ${processData.message}`);
             }
+
         } catch (error) {
             console.error("Erreur lors de l'envoi :", error);
             alert("Erreur de connexion avec le serveur.");
         } finally {
             setIsUploading(false);
+            setIsProcessing(false);
         }
     };
 
@@ -100,9 +134,9 @@ export default function Notebooks() {
                                     />
                                     <Button 
                                         onClick={handleUpload} 
-                                        disabled={isUploading || !selectedFile}  
+                                        disabled={isUploading || isProcessing || !selectedFile}  
                                     >
-                                        {isUploading ? "Uploading..." : "Upload au RAG"}
+                                        {isUploading ? "Uploading..." : isProcessing ? "Processing (This takes a while)..." : "Upload au RAG"}
                                     </Button>
                                 </div>
                             </DialogContent>

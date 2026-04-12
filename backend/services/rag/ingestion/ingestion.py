@@ -3,7 +3,7 @@ import os
 from werkzeug.utils import secure_filename
 from unstructured.documents.elements import Title, NarrativeText, ListItem, Table
 import logging
-from backend.entities.models import Session, Document, db
+from entities.models import Session, Document, db
 
 UPLOAD_FOLDER= './uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -26,7 +26,9 @@ def save_file(file, etudiant):
 
     return{
         "message": "file saved successfully",
-        "filepath": filepath
+        "filepath": filepath,
+        "id_document": new_document.id
+
     }, 200
 
 def extract_text(file_path: str):

@@ -13,7 +13,7 @@ function App() {
     <>
       {showNavbar && <Navbar />}
       <Routes>
-        <Route path="/" element={<Notebooks />} />
+        <Route path="/Notebooks" element={<Notebooks />} />
         <Route path="/Notebook" element={<Notebook />} />
         <Route path="/auth" element={<Auth />} />
       </Routes>
