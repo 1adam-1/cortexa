@@ -23,6 +23,14 @@ class Session(db.Model):
     date_debut=db.Column(db.DateTime, default=datetime.utcnow)
     etudiant=db.relationship("Etudiant", backref=db.backref("sessions", cascade="all, delete-orphan"))
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "id_etudiant": self.id_etudiant,
+            "date_debut": self.date_debut.isoformat() if self.date_debut else None,
+            "documents": [doc.to_dict() for doc in self.documents] if hasattr(self, 'documents') else []
+        }
+
 
 class Document(db.Model):
     __tablename__ = "document"
@@ -34,8 +42,18 @@ class Document(db.Model):
     date_upload=db.Column(db.DateTime, default=datetime.utcnow)
     session=db.relationship("Session", backref=db.backref("documents", cascade="all, delete-orphan"))
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "path": self.path,
+            "date_upload": self.date_upload.isoformat() if self.date_upload else None
+        }
+
 
 class Chunk(db.Model):
+    __tablename__ = "chunk"
+
     id=db.Column(db.Integer, primary_key=True)
     id_document=db.Column(db.Integer, ForeignKey("document.id", ondelete='CASCADE'), nullable=False)
     title=db.Column(db.String(100), nullable=False)
@@ -112,7 +130,7 @@ class Generation(db.Model):
     query=db.Column(db.Text, nullable=False)
     output=db.Column(db.Text, nullable=False)
     model=db.Column(db.String(100), nullable=False)
-    source_chunks=db.Column(db.String(100), nullable=False)
+    source=db.Column(db.String(100), nullable=False)
     created_at=db.Column(db.DateTime, default=datetime.utcnow)
     session=db.relationship("Session", backref="generations")
     chat_message=db.relationship("Chat_message", backref="generations")

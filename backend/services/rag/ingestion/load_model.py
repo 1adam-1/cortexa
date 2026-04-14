@@ -12,14 +12,14 @@ def load_generation_model(model_id="meta-llama/Meta-Llama-3.1-8B-Instruct"):
     generation_model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_config,
-        device_map="auto",
+        device_map="cuda",
     )
     return tokenizer, generation_model
 
 def load_embedding_models():
     embedding_model = SentenceTransformer(
         "BAAI/bge-m3",
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device="cpu",
     )
-    reranker = CrossEncoder("BAAI/bge-reranker-base")
+    reranker = CrossEncoder("BAAI/bge-reranker-base", device="cpu")
     return embedding_model, reranker

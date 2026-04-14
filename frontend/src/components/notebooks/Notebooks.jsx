@@ -1,5 +1,5 @@
 import { Button } from '../ui/button.tsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Card,
     CardDescription,
@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui/card.tsx";
-import { Plus } from "lucide-react";
+import { Plus, BookOpen } from "lucide-react";
 import classes from './Notebook.module.css';
 
 import {
@@ -17,11 +17,35 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 
 export default function Notebooks() {
+    const navigate = useNavigate();
     const [selectedFile, setSelectedFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [sessions, setSessions] = useState([]);
+
+    //get user id
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : null;
+
+    //fetch sessions
+    useEffect(() => {
+        const fetchSessions = async () => {
+            if (!userId) return;
+            const token = localStorage.getItem("access_token");
+            const response = await fetch(`http://localhost:5000/auth/sessions/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+            setSessions(data);
+        };
+        fetchSessions();
+    }, [userId]);
 
     //upload file
     const handleFileChange = (event) => {
@@ -100,8 +124,9 @@ export default function Notebooks() {
                     </p>
                 </div>
             </div>
-
+            
             <div className={classes.cards}>
+
                 <Card className={`${classes.createCard} w-[350px]`}>
                     <CardHeader className={classes.cardHeader}>
                         <div className={classes.iconWrapper}>
@@ -143,6 +168,32 @@ export default function Notebooks() {
                         </Dialog>
                     </CardFooter>
                 </Card>
+
+                {/* Displaying User Sessions */}
+                {sessions && sessions.length > 0 && sessions.map((session) => (
+                    <a onClick={() => navigate(`/notebook/${session.id}`)}>
+                    <Card key={session.id} className="w-[350px] flex flex-col justify-between shadow-sm border border-border/50 backdrop-blur-xl bg-card/40 hover:bg-card/80 transition-all hover:shadow-md cursor-pointer">
+                        <CardHeader className="pb-4">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
+                                <BookOpen size={20} />
+                            </div>
+                            <CardTitle>Notebook #{session.id}</CardTitle>
+                            <CardDescription>
+                                Created: {new Date(session.date_debut).toLocaleDateString()}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="pt-0">
+                            <div className="flex flex-col gap-2 w-full">
+                                <div className="flex items-center text-sm text-muted-foreground border-t pt-4">
+                                    <span className="bg-secondary/50 px-2.5 py-1 rounded-md font-medium text-xs">
+                                        {session.documents?.length || 0} Document(s)
+                                    </span>
+                                </div>
+                            </div>
+                        </CardFooter>
+                    </Card>
+                    </a>
+                ))}
             </div>
         </div>
     );

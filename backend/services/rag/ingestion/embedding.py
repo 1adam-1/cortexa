@@ -24,8 +24,8 @@ def create_faiss_index(chunks, embeddings):
     index.add_with_ids(embeddings, ids)
     for chunk_id in ids:
         chunk_embedding = Chunk_embedding(
-            id_chunk=chunk_id,
-            id_faiss=chunk_id,
+            id_chunk=int(chunk_id),
+            id_faiss=int(chunk_id),
             dimension=dimension,
         )
         db.session.add(chunk_embedding)

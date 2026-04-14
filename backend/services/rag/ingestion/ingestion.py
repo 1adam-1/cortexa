@@ -20,7 +20,7 @@ def save_file(file, etudiant):
     file.save(filepath)
 
      #create a new document for the session
-    new_document = Document(id_session=new_session.id,id_etudiant=etudiant.id, title=file.filename, path=filepath)
+    new_document = Document(id_session=new_session.id, title=file.filename, path=filepath)
     db.session.add(new_document)
     db.session.commit() 
 

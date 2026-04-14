@@ -13,8 +13,8 @@ function App() {
     <>
       {showNavbar && <Navbar />}
       <Routes>
-        <Route path="/Notebooks" element={<Notebooks />} />
-        <Route path="/Notebook" element={<Notebook />} />
+        <Route path="/Notebooks/:userId" element={<Notebooks />} />
+        <Route path="/Notebook/:sessionId" element={<Notebook />} />
         <Route path="/auth" element={<Auth />} />
       </Routes>
     </>
