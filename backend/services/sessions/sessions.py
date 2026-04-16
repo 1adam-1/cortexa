@@ -1,3 +1,4 @@
+import os
 from entities.models import Session, db
 
 def get_sessions(id_etudiant):
@@ -10,6 +11,16 @@ def get_session(id_session):
 
 def delete_session(id_session):
     session = Session.query.get(id_session)
-    db.session.delete(session)
-    db.session.commit()
+    if session:
+        # Loop through all documents in this session and delete their faiss index files
+        for doc in session.documents:
+            faiss_path = f"./uploads/index_{doc.id}.faiss"
+            if os.path.exists(faiss_path):
+                try:
+                    os.remove(faiss_path)
+                except Exception as e:
+                    print(f"Failed to delete {faiss_path}: {e}")
+                    
+        db.session.delete(session)
+        db.session.commit()
     return session

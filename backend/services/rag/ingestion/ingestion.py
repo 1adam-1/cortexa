@@ -27,7 +27,8 @@ def save_file(file, etudiant):
     return{
         "message": "file saved successfully",
         "filepath": filepath,
-        "id_document": new_document.id
+        "id_document": new_document.id,
+        "id_session": new_session.id
 
     }, 200
 

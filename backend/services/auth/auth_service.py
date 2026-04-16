@@ -40,3 +40,4 @@ def login_student(data):
             "email": exist.email
         }
     }, 200
+

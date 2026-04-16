@@ -125,15 +125,15 @@ class Generation(db.Model):
 
     id=db.Column(db.Integer, primary_key=True)
     id_session=db.Column(db.Integer, ForeignKey("session.id", ondelete='CASCADE'), nullable=False)
-    id_chat_message=db.Column(db.Integer, ForeignKey("chat_message.id", ondelete='CASCADE'), nullable=False)
+    id_chat=db.Column(db.Integer, ForeignKey("chat_message.id", ondelete='CASCADE'), nullable=False)
     type=db.Column(db.String(100), nullable=False)
     query=db.Column(db.Text, nullable=False)
     output=db.Column(db.Text, nullable=False)
     model=db.Column(db.String(100), nullable=False)
     source=db.Column(db.String(100), nullable=False)
     created_at=db.Column(db.DateTime, default=datetime.utcnow)
-    session=db.relationship("Session", backref="generations")
-    chat_message=db.relationship("Chat_message", backref="generations")
+    session=db.relationship("Session", backref=db.backref("generations", cascade="all, delete-orphan"))
+    chat_message=db.relationship("Chat_message", backref=db.backref("generations", cascade="all, delete-orphan"))
 
 
 class Rag_context(db.Model):
