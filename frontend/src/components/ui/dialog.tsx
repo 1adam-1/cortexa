@@ -24,7 +24,7 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 }
 
 function DialogOverlay({
-  className,
+  className, 
   ...props
 }: DialogPrimitive.Backdrop.Props) {
   return (

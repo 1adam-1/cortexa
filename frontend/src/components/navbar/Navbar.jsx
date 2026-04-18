@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import { Settings, CircleUserRound } from 'lucide-react';
+import { Settings, CircleUserRound, LogOut } from 'lucide-react';
 import logoUrl from '../../assets/cortexa.png';
 
 export function Navbar() {
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/auth';
+    };
     return (
         <header className={styles.header} role="banner">
             <div className={styles.inner}>
@@ -29,6 +35,14 @@ export function Navbar() {
                         aria-label="Profile"
                     >
                         <CircleUserRound size={20} />
+                    </Link>
+
+                    <Link
+                        className={styles.iconBtn}
+                        aria-label="Logout"
+                        onClick={handleLogout}
+                    >
+                        <LogOut size={20} />
                     </Link>
                 </div>
 

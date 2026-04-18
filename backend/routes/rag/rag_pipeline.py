@@ -1,8 +1,8 @@
-from flask import request, jsonify, Blueprint
+from flask import json, request, jsonify, Blueprint
 from services.rag.ingestion.ingestion import save_file, extract_text
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
-from services.rag.generation.generation import count_tokens, generate_answer, build_context
+from services.rag.generation.generation import count_tokens, generate_answer, build_context, extract_json_from_llama_response
 from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_chunks
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -92,7 +92,7 @@ def user_chat():
 
     retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
     reranked_chunks = rerank_chunks(question, retrievd_chunks, reranker)
-    context = build_context(reranked_chunks, tokenizer, question)
+    context = build_context(reranked_chunks, tokenizer, question, type="qa")
 
     new_chat_msg = Chat_message(
             id_session=session_id,
@@ -106,7 +106,7 @@ def user_chat():
     def generate():
         full_answer = ""
         try:
-            for chunk in generate_answer(context, question, tokenizer, generation_model):
+            for chunk in generate_answer(context, question, tokenizer, generation_model, type="qa"):
                 full_answer += chunk
                 yield f"data: {chunk}\n\n"
 
@@ -163,3 +163,73 @@ def get_chat_history(session_id):
             })
             
     return jsonify(history), 200
+
+
+#QCM
+@pipeline_rag_bp.route("/api/studio/qcm", methods=["POST"])
+@jwt_required()
+def generate_qcm():
+    data = request.get_json()
+    session_id = data.get("session_id")
+    current_user_id = int(get_jwt_identity())
+    question = "What are the key concepts and important facts in this document?"
+
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
+    document = Document.query.filter_by(id_session=session_id).first()
+    if not document:
+        return jsonify({"message": "No document found for this session"}), 404
+
+    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+    chunks = Chunk.query.filter_by(id_document=document.id).all()
+
+    retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
+    reranked_chunks = rerank_chunks(question, retrievd_chunks, reranker)
+    context = build_context(reranked_chunks, tokenizer, question, type="qcm")
+
+    qcm_raw_output = ""
+    for chunk in generate_answer(context, question, tokenizer, generation_model, type="qcm"):
+        qcm_raw_output += chunk
+
+    parsed_qcm = extract_json_from_llama_response(qcm_raw_output)
+
+    if not parsed_qcm:
+       return jsonify({"message": "Failed to generate valid QCM format", "raw": qcm_raw_output}), 500
+
+    new_generation = Generation(
+        id_session=session_id,
+        id_chat=None,
+        type="QCM",
+        query=question,
+        output=json.dumps(parsed_qcm),
+        model=generation_model.name_or_path,
+        source="studio",
+    )
+    db.session.add(new_generation)
+    db.session.commit()
+
+    return jsonify({"qcm": parsed_qcm}), 200
+
+
+@pipeline_rag_bp.route("/api/generation/qcm/<int:session_id>", methods=["GET"])
+@jwt_required()
+def get_qcm_generation(session_id):
+    generations = db.session.query(Generation).filter_by(id_session=session_id, type="QCM").order_by(Generation.created_at.desc()).all()
+
+    if not generations:
+        return jsonify({"qcms": []}), 200
+    
+    generation_history = []
+    for gen in generations:
+        generation_history.append({
+            "id": gen.id,
+            "query": gen.query,
+            "output": gen.output,
+            "created_at": gen.created_at.isoformat(),
+        })
+
+    return jsonify({"qcms": generation_history}), 200
+    
+

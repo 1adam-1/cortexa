@@ -1,6 +1,9 @@
 def generate_qcm(context, tokenizer, generation_model, max_new_tokens=500):
     messages = [
-        {"role": "user", "content": f"Genere 5 questions a choix multiples a partir du contexte suivant.\n\nContexte:\n{context}\n\nChaque question doit contenir :\n- 4 options\n- 1 bonne reponse\n\nRetourne le resultat au format JSON :\n\n{{\n \"question\": \"\",\n \"options\": [\"\",\"\",\"\",\"\"],\n \"answer\": \"\"\n}}"}
+        {"role": "user", 
+         "content": f"Genere 5 questions a choix multiples a partir du contexte suivant.\n\nContexte:\n{context}\n\nChaque question \
+            doit contenir :\n- 4 options\n- 1 bonne reponse\n\n \
+            Retourne le resultat au format JSON :\n\n{{\n \"question\": \"\",\n \"options\": [\"\",\"\",\"\",\"\"],\n \"answer\": \"\"\n}}"}
     ]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 

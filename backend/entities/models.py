@@ -125,7 +125,7 @@ class Generation(db.Model):
 
     id=db.Column(db.Integer, primary_key=True)
     id_session=db.Column(db.Integer, ForeignKey("session.id", ondelete='CASCADE'), nullable=False)
-    id_chat=db.Column(db.Integer, ForeignKey("chat_message.id", ondelete='CASCADE'), nullable=False)
+    id_chat=db.Column(db.Integer, ForeignKey("chat_message.id", ondelete='CASCADE'), nullable=True)
     type=db.Column(db.String(100), nullable=False)
     query=db.Column(db.Text, nullable=False)
     output=db.Column(db.Text, nullable=False)
@@ -134,6 +134,7 @@ class Generation(db.Model):
     created_at=db.Column(db.DateTime, default=datetime.utcnow)
     session=db.relationship("Session", backref=db.backref("generations", cascade="all, delete-orphan"))
     chat_message=db.relationship("Chat_message", backref=db.backref("generations", cascade="all, delete-orphan"))
+    
 
 
 class Rag_context(db.Model):

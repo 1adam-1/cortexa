@@ -14,6 +14,7 @@ export default function Auth() {
     setErrorMsg("");
     setSuccessMsg("");
   };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function Auth() {
         if(isLogin){
           localStorage.setItem("access_token", data.access_token);
           localStorage.setItem("user", JSON.stringify(data.user));
-          navigate(`/Notebooks/${data.user.id}`);   
+          navigate("/Notebooks");   
         }
         else{
           setSuccessMsg(data.message || "Compte créé avec succès ! Connectez-vous.");

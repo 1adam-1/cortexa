@@ -18,6 +18,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 
 export default function Notebooks() {
     const navigate = useNavigate();
@@ -25,14 +26,13 @@ export default function Notebooks() {
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [sessions, setSessions] = useState([]);
+    const [idSession, setIdSession] = useState(null);
 
     //get user id
     const user = localStorage.getItem("user");
     const userId = user ? JSON.parse(user).id : null;
 
-    //fetch sessions
-    useEffect(() => {
-        const fetchSessions = async () => {
+   const fetchSessions = async () => {
             if (!userId) return;
             const token = localStorage.getItem("access_token");
             const response = await fetch(`http://localhost:5000/auth/sessions/${userId}`, {
@@ -41,9 +41,20 @@ export default function Notebooks() {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            
+            if (response.status === 401 || response.status === 403) {
+                alert("Session expirée ou accès refusé.");
+                navigate("/auth");
+                return;
+            }
+
             const data = await response.json();
             setSessions(data);
         };
+
+    //fetch sessions
+    useEffect(() => {
+        
         fetchSessions();
     }, [userId]);
 
@@ -67,8 +78,13 @@ export default function Notebooks() {
             formData.append("file", selectedFile);
             
             const token = localStorage.getItem("access_token");
+            if (!token) {
+                alert("Session expirée. Veuillez vous reconnecter.");
+                navigate("/auth");
+                return;
+            }
 
-            const uploadResponse = await fetch('/api/upload', {
+            const uploadResponse = await fetch('http://localhost:5000/api/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -76,6 +92,7 @@ export default function Notebooks() {
                 body: formData,
             });
             const uploadData = await uploadResponse.json();
+            setIdSession(uploadData.id_session);
             
             if (!uploadResponse.ok) {
                 alert(`Erreur d'upload : ${uploadData.message || uploadData.error}`);
@@ -86,7 +103,7 @@ export default function Notebooks() {
             setIsUploading(false);
             setIsProcessing(true); // Switch to processing state
 
-            const processResponse = await fetch('/api/processing', {
+            const processResponse = await fetch('http://localhost:5000/api/processing', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -99,10 +116,14 @@ export default function Notebooks() {
 
             if (processResponse.ok) {
                 alert("Fichier envoyé et traité avec succès au RAG !");
-                console.log(processData);
                 setSelectedFile(null);
+                navigate(`/Notebook/${idSession}`);
             } else {
-                alert(`Erreur de traitement : ${processData.message}`);
+                if (processResponse.status === 403) {
+                    alert("Accès refusé. Vous n'êtes pas autorisé à effectuer cette action.");
+                } else {
+                    alert(`Erreur de traitement : ${processData.message}`);
+                }
             }
 
         } catch (error) {
@@ -111,8 +132,36 @@ export default function Notebooks() {
         } finally {
             setIsUploading(false);
             setIsProcessing(false);
+            
         }
+        
     };
+
+     //delete session
+    const handleDelete = async (id_session) => {
+    try {
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            `http://localhost:5000/auth/deleteSession/${id_session}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to delete session");
+        }
+
+        fetchSessions();
+
+    } catch (error) {
+        console.error("Error deleting session:", error);
+    }
+};
 
     return (
         <div className={classes.Notebooks}>
@@ -127,72 +176,95 @@ export default function Notebooks() {
             
             <div className={classes.cards}>
 
-                <Card className={`${classes.createCard} w-[350px]`}>
-                    <CardHeader className={classes.cardHeader}>
-                        <div className={classes.iconWrapper}>
-                            <Plus className={classes.icon} />
-                        </div>
-                        <CardTitle>Create Notebook</CardTitle>
-                        <CardDescription>
-                            Build a new notebook from your sources
-                        </CardDescription>
-                    </CardHeader>
+                <div className={`${classes.cardBase} ${classes.createCard}`}>
+                    <div className={classes.iconWrapper}>
+                        <Plus className={classes.icon} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Create Notebook</h3>
+                    <p className="text-zinc-400 text-sm text-center mb-6">
+                        Build a new knowledge base from your sources
+                    </p>
 
-                    <CardFooter>
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button className={classes.createButton}>
-                                    <Plus size={18} /> New Notebook
-                                </Button>
-                            </DialogTrigger>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button className={classes.createButton}>
+                                <Plus size={18} className="mr-2" /> New Notebook
+                            </Button>
+                        </DialogTrigger>
 
-                             <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle>Upload Files</DialogTitle>
-                                </DialogHeader>
-                                <div className="flex flex-col gap-4">
+                        <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
+                            <DialogHeader>
+                                <DialogTitle className="text-white">Upload Files</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex flex-col gap-4 mt-4">
+                                <div className="border-2 border-dashed border-zinc-800 rounded-xl p-12 flex flex-col items-center justify-center hover:border-zinc-700 transition-colors cursor-pointer group">
                                     <input
                                         type="file"
-                                        className="border p-2 rounded-md h-56 cursor-pointer"
+                                        className="hidden"
                                         id="fileUpload"
                                         onChange={handleFileChange} 
                                     />
-                                    <Button 
-                                        onClick={handleUpload} 
-                                        disabled={isUploading || isProcessing || !selectedFile}  
-                                    >
-                                        {isUploading ? "Uploading..." : isProcessing ? "Processing (This takes a while)..." : "Upload au RAG"}
-                                    </Button>
+                                    <label htmlFor="fileUpload" className="flex flex-col items-center cursor-pointer">
+                                        <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center mb-4 group-hover:bg-white group-hover:text-black transition-all">
+                                            <Plus size={24} />
+                                        </div>
+                                        <span className="text-zinc-400 font-medium">
+                                            {selectedFile ? selectedFile.name : "Click to select or drag and drop"}
+                                        </span>
+                                    </label>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
-                    </CardFooter>
-                </Card>
+                                <Button 
+                                    className="w-full bg-white text-black hover:bg-zinc-200 transition-colors font-bold h-12 rounded-xl"
+                                    onClick={handleUpload} 
+                                    disabled={isUploading || isProcessing || !selectedFile}  
+                                >
+                                    {isUploading ? "Uploading..." : isProcessing ? "Processing (This takes a while)..." : "Upload to RAG"}
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
 
                 {/* Displaying User Sessions */}
                 {sessions && sessions.length > 0 && sessions.map((session) => (
-                    <a onClick={() => navigate(`/notebook/${session.id}`)}>
-                    <Card key={session.id} className="w-[350px] flex flex-col justify-between shadow-sm border border-border/50 backdrop-blur-xl bg-card/40 hover:bg-card/80 transition-all hover:shadow-md cursor-pointer">
-                        <CardHeader className="pb-4">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
-                                <BookOpen size={20} />
+                    <div 
+                        key={session.id} 
+                        className={classes.cardBase}
+                        onClick={() => navigate(`/Notebook/${session.id}`)}
+                    >
+                        <div className="p-8 h-full flex flex-col cursor-pointer">
+                            <div className="h-12 w-12 rounded-xl bg-white text-black flex items-center justify-center mb-6">
+                                <BookOpen size={24} />
                             </div>
-                            <CardTitle>Notebook #{session.id}</CardTitle>
-                            <CardDescription>
-                                Created: {new Date(session.date_debut).toLocaleDateString()}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardFooter className="pt-0">
-                            <div className="flex flex-col gap-2 w-full">
-                                <div className="flex items-center text-sm text-muted-foreground border-t pt-4">
-                                    <span className="bg-secondary/50 px-2.5 py-1 rounded-md font-medium text-xs">
-                                        {session.documents?.length || 0} Document(s)
-                                    </span>
-                                </div>
+                            
+                            <h3 className="text-xl font-bold text-white mb-2">Notebook #{session.id}</h3>
+                            <p className="text-zinc-400 text-sm mb-auto">
+                                Created on {new Date(session.date_debut).toLocaleDateString(undefined, {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </p>
+
+                            <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                    {session.documents?.length || 0} Documents
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-zinc-600 hover:text-white hover:bg-white/5 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(session.id);
+                                    }}
+                                    title="Delete Notebook"
+                                >
+                                    <Trash2 size={18} />
+                                </Button>
                             </div>
-                        </CardFooter>
-                    </Card>
-                    </a>
+                        </div>
+                    </div>
                 ))}
             </div>
         </div>

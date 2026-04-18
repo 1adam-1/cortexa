@@ -20,7 +20,7 @@ def build_context(chunks, tokenizer, question=None, budget_input=DEFAULT_BUDGET_
         2. Si la réponse n'est pas explicitement dans le contexte, réponds EXACTEMENT : "Je ne sais pas".
         3. N'invente rien. N'utilise aucune connaissance externe.
         4. Cite les passages du contexte utilisés si possible.
-        5. Réponds en français."""
+        5. Réponds par la langue de la question."""
     },
        {
         "role": "user",

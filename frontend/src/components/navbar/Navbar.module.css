@@ -1,16 +1,18 @@
 .header {
-    --nav-height: 56px;
-    --nav-bg: #ffffff;
-    --nav-border: #e5e7eb;
-    --icon-color: #6b7280;
-    --icon-hover-bg: #f3f4f6;
-    --icon-hover-color: #111827;
+    --nav-height: 64px;
+    --nav-bg: #000;
+    --nav-border: rgba(255, 255, 255, 0.1);
+    --icon-color: #a1a1aa;
+    --icon-hover-bg: rgba(255, 255, 255, 0.05);
+    --icon-hover-color: #ffffff;
 
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 1px solid #e5e7eb;
-    height: 56px;
+    border-bottom: 1px solid var(--nav-border);
+    background: var(--nav-bg);
+    height: var(--nav-height);
+    backdrop-filter: blur(12px);
 }
 
 .inner {
@@ -18,35 +20,39 @@
     align-items: center;
     justify-content: space-between;
     height: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
 }
 
 .brand {
     display: flex;
     align-items: center;
-    margin-right: auto;
 }
 
 .logo {
-    height: 70px;
+    height: 32px;
     width: auto;
+    filter: brightness(0) invert(1);
 }
 
 .actions {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-right: 1rem;
+    gap: 0.5rem;
 }
 
 .iconBtn {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0.4rem;
-    border-radius: 8px;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
     color: var(--icon-color);
     text-decoration: none;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 .iconBtn:hover {
