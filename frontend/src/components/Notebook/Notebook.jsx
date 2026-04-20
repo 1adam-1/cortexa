@@ -86,13 +86,14 @@ export default function Notebook() {
 
     //fetch chat history
     const fetchHistory = async () => {
-                try {
-                    const token = localStorage.getItem("access_token");
-                    const response = await fetch(`http://localhost:5000/api/sessions/${sessionId}/messages`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
+        if (!sessionId || sessionId === "null") return;
+        try {
+            const token = localStorage.getItem("access_token");
+            const response = await fetch(`http://localhost:5000/api/sessions/${sessionId}/messages`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
                     
                     if (response.status === 401 || response.status === 403) {
                         alert("Accès refusé ou session expirée.");
@@ -110,6 +111,7 @@ export default function Notebook() {
     
     //fetch stored QCMs
     const fetchQCM = async () => {
+        if (!sessionId || sessionId === "null") return;
         try {
             const token = localStorage.getItem("access_token");
             const response = await fetch(`http://localhost:5000/api/generation/qcm/${sessionId}`, {

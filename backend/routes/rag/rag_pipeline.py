@@ -8,9 +8,11 @@ from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
 from services.rag.ingestion.embedding import save_chunks, save_index
-from entities.models import Chunk, Session, Document, Chat_message, Generation, db
+from entities.models import Chunk, Session, Document, Chat_message, Generation, Cluster, Cluster_chunk, Concept, db
 import faiss
 from flask import Response, stream_with_context
+from services.rag.clustering.clustering import build_cluster_context, compute_concept_embeddings, create_concept_faiss_index, extract_concept_from_clusters, cluster_chunks
+import re
 
 
 pipeline_rag_bp = Blueprint("pipeline_rag", __name__)
@@ -60,12 +62,74 @@ def processing_file():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
     
+    #EXTRACTING + CHUNKING + EMBEDDING + INDEXING
     path = document.path
     sections = extract_text(path)
     chunks = chunk_text_by_tokens(document.id, sections, tokenizer)
     embeddings = compute_embeddings(chunks, embedding_model)
     index = create_faiss_index(chunks, embeddings)
     save_index(index, f"./uploads/index_{document.id}.faiss")
+
+    #CLUSTERING + CONCEPT EXTRACTION
+    clusters, noise = cluster_chunks(chunks, embeddings)
+    print(f"Found {len(clusters)} clusters and {len(noise)} noise chunks")
+    concepts = []
+    for cluster_id, chunk_list in clusters.items():
+        # Create the cluster for the database
+        new_cluster = Cluster(
+            id_session=document.id_session,
+            method="hdbscan",
+        )
+        db.session.add(new_cluster)
+        db.session.commit()  
+        
+        # Link each chunk to this new cluster
+        for chunk in chunk_list:
+            new_cluster_chunk = Cluster_chunk(
+                id_chunk=chunk["id"],
+                id_cluster=new_cluster.id,
+            )
+            db.session.add(new_cluster_chunk)
+        db.session.commit() # Commit all chunks for this cluster
+
+        output_str = extract_concept_from_clusters(chunk_list, generation_model, tokenizer, cluster_id)
+        
+        parsed_concepts = []
+        try:
+            match = re.search(r'\{.*\}', output_str, re.DOTALL)
+            if match:
+                parsed_output = json.loads(match.group(0))
+                parsed_concepts = parsed_output.get("concepts", [])
+        except Exception as e:
+            print(f"Error parsing concept JSON: {e}")
+
+        added_concepts = []
+        for c in parsed_concepts:
+            keywords_val = c.get("keywords", [])
+            importance_val = c.get("importance", 0.0)
+            
+            new_concept = Concept(
+                id_cluster=new_cluster.id,
+                name=c.get("name", "Unknown"),
+                definition=c.get("definition", ""),
+                keywords=", ".join(keywords_val) if isinstance(keywords_val, list) else str(keywords_val),
+                importance=str(importance_val),
+            )
+            db.session.add(new_concept)
+            added_concepts.append(new_concept)
+            
+        db.session.flush() 
+        
+        concepts_ids = [c.id for c in added_concepts]
+        
+        if parsed_concepts:
+            concept_embeddings = compute_concept_embeddings(parsed_concepts, embedding_model)
+            concept_index = create_concept_faiss_index(concept_embeddings, concepts_ids)
+            if concept_index is not None:
+                save_index(concept_index, f"./uploads/concept_index_{new_cluster.id}.faiss")
+        db.session.commit()
+
+           
 
     return jsonify({"message": "Document processed successfully"}), 200
 

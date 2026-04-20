@@ -78,10 +78,13 @@ class Cluster(db.Model):
     __tablename__ = "cluster"
 
     id=db.Column(db.Integer, primary_key=True)
+    id_session=db.Column(db.Integer, ForeignKey("session.id", ondelete='CASCADE'), nullable=False)
     method=db.Column(db.String(100), nullable=False)
+    created_at=db.Column(db.DateTime, default=datetime.utcnow)
+    session=db.relationship("Session", backref=db.backref("clusters", cascade="all, delete-orphan"))
 
 
-class cluster_chunk(db.Model):
+class Cluster_chunk(db.Model):
     __tablename__ = "cluster_chunk"
 
     id_chunk=db.Column(db.Integer, ForeignKey("chunk.id", ondelete='CASCADE'), nullable=False, primary_key=True)

@@ -92,12 +92,14 @@ export default function Notebooks() {
                 body: formData,
             });
             const uploadData = await uploadResponse.json();
-            setIdSession(uploadData.id_session);
             
             if (!uploadResponse.ok) {
                 alert(`Erreur d'upload : ${uploadData.message || uploadData.error}`);
+                setIsUploading(false);
                 return;
             }
+
+            setIdSession(uploadData.id_session); // Keeping this if you need it elsewhere
 
             // STEP 2: Process the document using the ID returned
             setIsUploading(false);
@@ -114,10 +116,12 @@ export default function Notebooks() {
 
             const processData = await processResponse.json();
 
+            setIsProcessing(false);
+
             if (processResponse.ok) {
                 alert("Fichier envoyé et traité avec succès au RAG !");
                 setSelectedFile(null);
-                navigate(`/Notebook/${idSession}`);
+                navigate(`/Notebook/${uploadData.id_session}`);
             } else {
                 if (processResponse.status === 403) {
                     alert("Accès refusé. Vous n'êtes pas autorisé à effectuer cette action.");
