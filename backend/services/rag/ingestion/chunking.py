@@ -10,7 +10,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
     for section in sections:
         title = section["title"] or "Untitled"
         types = section.get("types",[])
-        items = section["text"]
+        items = section["content"]
         pages = section.get("pages", [])
 
         current_chunk = []
@@ -36,7 +36,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                         "id": new_chunk.id,
                         "title": title,
                         "types": types,
-                        "text": "\n".join(current_chunk),
+                        "content": "\n".join(current_chunk),
                         "pages": pages,
                     })
                    
@@ -58,7 +58,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                     "id": new_chunk.id,
                     "title": title,
                     "type": types,
-                    "text": item,
+                    "content": item,
                     "pages": pages,
                 })
                 
@@ -84,7 +84,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                         "id": new_chunk.id,
                         "title": title,
                         "types": types,
-                        "text": "\n".join(current_chunk),
+                        "content": "\n".join(current_chunk),
                         "pages": pages,
                     })
 
@@ -111,7 +111,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                 "id": new_chunk.id,
                 "title": title,
                 "type": types,
-                "text": "\n".join(current_chunk),
+                "content": "\n".join(current_chunk),
                 "pages": pages,
             })
 

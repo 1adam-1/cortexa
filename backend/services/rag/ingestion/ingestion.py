@@ -50,7 +50,7 @@ def extract_text(file_path: str):
     current_section = {
         "title": "PREAMBLE",
         "types": set(),
-        "text": [],
+        "content": [],
         "pages": set(),
     }
 
@@ -62,38 +62,38 @@ def extract_text(file_path: str):
         page = el.metadata.page_number if hasattr(el, 'metadata') and hasattr(el.metadata, 'page_number') and el.metadata.page_number else None
 
         if isinstance(el, Title):
-            if current_section["text"]:
+            if current_section["content"]:
                 current_section["types"] = list(current_section["types"])
                 current_section["pages"] = list(current_section["pages"])
                 structured_output.append(current_section)
             current_section = {
                 "title": text,
                 "types": set(),
-                "text": [],
+                "content": [],
                 "pages": set(),
             }
             if page:
                 current_section["pages"].add(page)
 
         elif isinstance(el, NarrativeText):
-            current_section["text"].append(text)
+            current_section["content"].append(text)
             current_section["types"].add("NarrativeText")
             if page:
                 current_section["pages"].add(page)
 
         elif isinstance(el, ListItem):
-            current_section["text"].append(f"- {text}")
+            current_section["content"].append(f"- {text}")
             current_section["types"].add("ListItem")
             if page:
                 current_section["pages"].add(page)
 
         elif isinstance(el, Table):
-            current_section["text"].append(f"[TABLE]\n{text}")
+            current_section["content"].append(f"[TABLE]\n{text}")
             current_section["types"].add("Table")
             if page:
                 current_section["pages"].add(page)
 
-    if current_section["text"]:
+    if current_section["content"]:
         current_section["types"] = list(current_section["types"])
         current_section["pages"] = list(current_section["pages"])
         structured_output.append(current_section)

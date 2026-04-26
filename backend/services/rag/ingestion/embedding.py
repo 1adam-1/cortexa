@@ -6,7 +6,7 @@ from entities.models import Chunk_embedding, db
 
 
 def compute_embeddings(chunks, embedding_model):
-    text = [chunk["text"] for chunk in chunks]
+    text = [chunk["content"] for chunk in chunks]
     embeddings = embedding_model.encode(text)
     return np.array(embeddings).astype("float32")
 

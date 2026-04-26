@@ -59,7 +59,7 @@ def build_cluster_context(cluster, tokenizer):
     total_tokens = 0
 
     for i, chunk in enumerate(cluster):
-        text = f"[chunk{i}] \n title: {chunk.get('title', '')} \n {chunk['text']} \n"
+        text = f"[chunk{i}] \n title: {chunk.get('title', '')} \n {chunk['content']} \n"
         
         chunk_tokens = count_tokens(text, tokenizer)
         

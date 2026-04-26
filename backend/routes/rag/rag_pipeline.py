@@ -2,13 +2,13 @@ from flask import json, request, jsonify, Blueprint
 from services.rag.ingestion.ingestion import save_file, extract_text
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
-from services.rag.generation.generation import count_tokens, generate_answer, build_context, extract_json_from_llama_response
-from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_chunks
+from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
+from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_chunks, rerank_unified
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
-from services.rag.ingestion.embedding import save_chunks, save_index
-from entities.models import Chunk, Session, Document, Chat_message, Generation, Cluster, Cluster_chunk, Concept, db
+from services.rag.ingestion.embedding import  save_index
+from entities.models import Chunk, Session, Document, Chat_message, Generation, Cluster, Cluster_chunk, Concept,Rag_context_chunk,Rag_context_concept, db
 import faiss
 from flask import Response, stream_with_context
 from services.rag.clustering.clustering import build_cluster_context, compute_concept_embeddings, create_concept_faiss_index, extract_concept_from_clusters, cluster_chunks
@@ -155,8 +155,11 @@ def user_chat():
     chunks = Chunk.query.filter_by(id_document=document.id).all()
 
     retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
-    reranked_chunks = rerank_chunks(question, retrievd_chunks, reranker)
-    context = build_context(reranked_chunks, tokenizer, question, type="qa")
+    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
+    all_candidates = retrievd_chunks + concepts
+
+    reranked_items = rerank_unified(question, all_candidates, reranker)
+    context = build_context(reranked_items, tokenizer, question, type="qa")
 
     new_chat_msg = Chat_message(
             id_session=session_id,
@@ -166,6 +169,16 @@ def user_chat():
     db.session.add(new_chat_msg)
     db.session.commit()
     chat_msg_id = new_chat_msg.id 
+
+    context_data = []
+    for item in reranked_items:
+        context_data.append({
+            "id": getattr(item, "id", None),
+            "is_chunk": hasattr(item, "content"),
+            "is_concept": hasattr(item, "definition"),
+            "rerank_score": getattr(item, "rerank_score", 0.0)
+        })
+
 
     def generate():
         full_answer = ""
@@ -190,10 +203,30 @@ def user_chat():
                 )
                 db.session.add(new_generation)
                 db.session.commit()
+                
+                for item_data in context_data:
+                    if item_data["is_chunk"]:
+                        new_rag_context_chunk = Rag_context_chunk(
+                            id_generation=new_generation.id,
+                            id_chunk=item_data["id"],
+                            reranker_model="reranker",
+                            rerank_score=item_data["rerank_score"],
+                        )
+                        db.session.add(new_rag_context_chunk)
+                    
+                    elif item_data["is_concept"]:
+                        new_rag_context_concept = Rag_context_concept(
+                            id_generation=new_generation.id,
+                            id_concept=item_data["id"],
+                            similarity_score=item_data["rerank_score"],
+                        )
+                        db.session.add(new_rag_context_concept)
+                db.session.commit()
+
             except Exception as e:
                 print(f"Error saving generation on stop: {e}")
                 db.session.rollback()
-
+    
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @pipeline_rag_bp.route("/api/sessions/<int:session_id>/messages", methods=["GET"])
@@ -235,7 +268,10 @@ def get_chat_history(session_id):
 def generate_qcm():
     data = request.get_json()
     session_id = data.get("session_id")
+    num_questions = data.get("num_questions", 5)
+    difficulty = data.get("difficulty", "medium")
     current_user_id = int(get_jwt_identity())
+    
     question = "What are the key concepts and important facts in this document?"
 
     session_obj = Session.query.get(session_id)
@@ -250,11 +286,14 @@ def generate_qcm():
     chunks = Chunk.query.filter_by(id_document=document.id).all()
 
     retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
-    reranked_chunks = rerank_chunks(question, retrievd_chunks, reranker)
-    context = build_context(reranked_chunks, tokenizer, question, type="qcm")
+    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
+    all_candidates = retrievd_chunks + concepts
+
+    reranked_items = rerank_unified(question, all_candidates, reranker)
+    context = build_context(reranked_items, tokenizer, question, type="qcm", num_questions=num_questions, difficulty=difficulty)
 
     qcm_raw_output = ""
-    for chunk in generate_answer(context, question, tokenizer, generation_model, type="qcm"):
+    for chunk in generate_answer(context, question, tokenizer, generation_model, type="qcm", num_questions=num_questions, difficulty=difficulty):
         qcm_raw_output += chunk
 
     parsed_qcm = extract_json_from_llama_response(qcm_raw_output)
@@ -272,6 +311,27 @@ def generate_qcm():
         source="studio",
     )
     db.session.add(new_generation)
+    db.session.commit()
+
+    for item in reranked_items:
+        if hasattr(item, "content"): 
+            new_rag_context_chunk = Rag_context_chunk(
+                id_generation=new_generation.id,
+                id_chunk=item.id,
+                reranker_model="reranker",
+                rerank_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_chunk)
+        
+        elif hasattr(item, "definition"): 
+            
+            new_rag_context_concept = Rag_context_concept(
+                id_generation=new_generation.id,
+                id_concept=item.id,
+                similarity_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_concept)
+            
     db.session.commit()
 
     return jsonify({"qcm": parsed_qcm}), 200
@@ -295,5 +355,157 @@ def get_qcm_generation(session_id):
         })
 
     return jsonify({"qcms": generation_history}), 200
+
+
+# PRACTICE: Generate a single question
+@pipeline_rag_bp.route("/api/studio/practice/question", methods=["POST"])
+@jwt_required()
+def generate_practice_question():
+    data = request.get_json()
+    session_id = data.get("session_id")
+    
+    topic = data.get("topic", "What are the key concepts and important facts in this document?")
+    current_user_id = int(get_jwt_identity())
+
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
+    document = Document.query.filter_by(id_session=session_id).first()
+    if not document:
+        return jsonify({"message": "No document found for this session"}), 404
+
+    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+    chunks = Chunk.query.filter_by(id_document=document.id).all()
+
+    retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
+    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
+    all_candidates = retrievd_chunks + concepts
+
+    reranked_items = rerank_unified(topic, all_candidates, reranker)
+    context = build_context(reranked_items, tokenizer, topic, type="practice_question")
+
+    question_raw_output = ""
+    for chunk in generate_answer(context, topic, tokenizer, generation_model, type="practice_question"):
+        question_raw_output += chunk
+
+    question_clean = question_raw_output.strip()
+
+    new_generation = Generation(
+        id_session=session_id,
+        id_chat=None,
+        type="Practice_Question",
+        query=topic,
+        output=question_clean,
+        model=generation_model.name_or_path,
+        source="studio",
+    )
+    db.session.add(new_generation)
+    db.session.commit()
+
+    for item in reranked_items:
+        if hasattr(item, "content"): 
+            new_rag_context_chunk = Rag_context_chunk(
+                id_generation=new_generation.id,
+                id_chunk=item.id,
+                reranker_model="reranker",
+                rerank_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_chunk)
+        
+        elif hasattr(item, "definition"): 
+            new_rag_context_concept = Rag_context_concept(
+                id_generation=new_generation.id,
+                id_concept=item.id,
+                similarity_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_concept)
+            
+    db.session.commit()
+
+    return jsonify({"question": question_clean}), 200
+
+
+# PRACTICE: Evaluate the user's answer
+@pipeline_rag_bp.route("/api/studio/practice/evaluate", methods=["POST"])
+@jwt_required()
+def evaluate_practice_answer():
+    data = request.get_json()
+    session_id = data.get("session_id")
+    question = data.get("question")
+    user_answer = data.get("user_answer")
+    current_user_id = int(get_jwt_identity())
+
+    if not question or not user_answer:
+        return jsonify({"message": "Question and user_answer are required"}), 400
+
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
+    document = Document.query.filter_by(id_session=session_id).first()
+    if not document:
+        return jsonify({"message": "No document found for this session"}), 404
+
+    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+    chunks = Chunk.query.filter_by(id_document=document.id).all()
+
+    # Re-retrieve context based on the generated question
+    retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
+    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
+    all_candidates = retrievd_chunks + concepts
+
+    reranked_items = rerank_unified(question, all_candidates, reranker)
+    
+    # We pass the question + the user answer to the prompt
+    eval_query = f"Question: {question}\nUser's Answer: {user_answer}"
+    context = build_context(reranked_items, tokenizer, eval_query, type="practice_evaluation")
+
+    eval_raw_output = ""
+    for chunk in generate_answer(context, eval_query, tokenizer, generation_model, type="practice_evaluation"):
+        eval_raw_output += chunk
+
+    parsed_eval = extract_json_from_llama_response(eval_raw_output)
+
+    if not parsed_eval:
+       return jsonify({"message": "Failed to generate valid evaluation format", "raw": eval_raw_output}), 500
+
+    new_generation = Generation(
+        id_session=session_id,
+        id_chat=None,
+        type="Practice_Evaluation",
+        query=eval_query,
+        output=json.dumps(parsed_eval),
+        model=generation_model.name_or_path,
+        source="studio",
+    )
+    db.session.add(new_generation)
+    db.session.commit()
+
+    for item in reranked_items:
+        if hasattr(item, "content"): 
+            new_rag_context_chunk = Rag_context_chunk(
+                id_generation=new_generation.id,
+                id_chunk=item.id,
+                reranker_model="reranker",
+                rerank_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_chunk)
+        
+        elif hasattr(item, "definition"): 
+            new_rag_context_concept = Rag_context_concept(
+                id_generation=new_generation.id,
+                id_concept=item.id,
+                similarity_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_concept)
+            
+    db.session.commit()
+
+    return jsonify({"evaluation": parsed_eval}), 200
+
+
+
+
     
 

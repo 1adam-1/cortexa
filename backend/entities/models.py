@@ -140,25 +140,19 @@ class Generation(db.Model):
     
 
 
-class Rag_context(db.Model):
-    __tablename__ = "rag_context"
-
-    id=db.Column(db.Integer, primary_key=True)
-    id_generation=db.Column(db.Integer, ForeignKey("generation.id", ondelete='CASCADE'), nullable=False)
-
-
 class Rag_context_chunk(db.Model):
     __tablename__ = "rag_context_chunk"
 
-    id_rag_context=db.Column(db.Integer, ForeignKey("rag_context.id", ondelete='CASCADE'), nullable=False, primary_key=True)
+    id_generation=db.Column(db.Integer, ForeignKey("generation.id", ondelete='CASCADE'), nullable=False, primary_key=True)
     id_chunk=db.Column(db.Integer, ForeignKey("chunk.id", ondelete='CASCADE'), nullable=False, primary_key=True)
     reranker_model=db.Column(db.String(100), nullable=False)
-    reranker_score=db.Column(db.Float, nullable=False)
+    rerank_score=db.Column(db.Float, nullable=False)
+    
 
 class Rag_context_concept(db.Model):
     __tablename__ = "rag_context_concept"
 
-    id_rag_context=db.Column(db.Integer, ForeignKey("rag_context.id", ondelete='CASCADE'), nullable=False, primary_key=True)
+    id_generation=db.Column(db.Integer, ForeignKey("generation.id", ondelete='CASCADE'), nullable=False, primary_key=True)
     id_concept=db.Column(db.Integer, ForeignKey("concept.id", ondelete='CASCADE'), nullable=False, primary_key=True)
     similarity_score=db.Column(db.Float, nullable=False)
     
