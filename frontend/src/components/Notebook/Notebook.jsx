@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import classes from "./Notebook.module.css";
-import { Send, Sparkles, MessageSquare, Settings, Layout, Square } from "lucide-react";
+import { Send, Sparkles, MessageSquare, Settings, Layout, Square, FilePlus, Plus } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog.tsx";
+import { Button } from "../ui/button.tsx";
 
 export default function Notebook() {
     const navigate = useNavigate();
@@ -29,6 +31,17 @@ export default function Notebook() {
     const [isGeneratingPractice, setIsGeneratingPractice] = useState(false);
     const [isEvaluatingPractice, setIsEvaluatingPractice] = useState(false);
     const [showPracticeModal, setShowPracticeModal] = useState(false);
+
+    // Summary specific states
+    const [summaryData, setSummaryData] = useState(null);
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [storedSummaries, setStoredSummaries] = useState([]);
+
+    // Upload specific states
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -159,6 +172,82 @@ export default function Notebook() {
         return score;
     };
 
+    const handleFileChange = (event) => {
+        if (event.target.files && event.target.files[0]) {
+            setSelectedFile(event.target.files[0]);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            alert("Veuillez d'abord sélectionner un fichier.");
+            return;
+        }
+        
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            formData.append("id_session", sessionId);
+            
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                alert("Session expirée. Veuillez vous reconnecter.");
+                navigate("/auth");
+                return;
+            }
+
+            const uploadResponse = await fetch('http://localhost:5000/api/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData,
+            });
+            const uploadData = await uploadResponse.json();
+            
+            if (!uploadResponse.ok) {
+                alert(`Erreur d'upload : ${uploadData.message || uploadData.error}`);
+                setIsUploading(false);
+                return;
+            }
+
+            setIsUploading(false);
+            setIsProcessing(true);
+
+            const processResponse = await fetch('http://localhost:5000/api/processing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id_document: uploadData.id_document })
+            });
+
+            const processData = await processResponse.json();
+
+            setIsProcessing(false);
+
+            if (processResponse.ok) {
+                alert("Fichier ajouté et traité avec succès au RAG !");
+                setSelectedFile(null);
+                setShowUploadModal(false);
+            } else {
+                if (processResponse.status === 403) {
+                    alert("Accès refusé. Vous n'êtes pas autorisé à effectuer cette action.");
+                } else {
+                    alert(`Erreur de traitement : ${processData.message}`);
+                }
+            }
+
+        } catch (error) {
+            console.error("Erreur lors de l'envoi :", error);
+            alert("Erreur de connexion avec le serveur.");
+            setIsUploading(false);
+            setIsProcessing(false);
+        }
+    };
+
     //fetch chat history
     const fetchHistory = async () => {
         if (!sessionId || sessionId === "null") return;
@@ -184,6 +273,41 @@ export default function Notebook() {
             };
 
     
+      //Summary generation
+    const handle_summary=async()=>{
+        try{
+            setIsGeneratingSummary(true);
+            const token = localStorage.getItem("access_token");
+
+            const response = await fetch("http://localhost:5000/api/studio/summary", {
+                method: "POST", 
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    session_id: sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.summary) {
+                setSummaryData(data.summary);
+                fetchSummaries(); // Refresh the list of summaries
+            }
+
+            setIsGeneratingSummary(false);
+
+        }catch(error){
+            console.error("Failed to generate summary:", error);
+            setIsGeneratingSummary(false);
+        }
+    }
+
     //fetch stored QCMs
     const fetchQCM = async () => {
         if (!sessionId || sessionId === "null") return;
@@ -201,12 +325,30 @@ export default function Notebook() {
         }
     };
 
+    //fetch stored summaries
+    const fetchSummaries = async () => {
+        if (!sessionId || sessionId === "null") return;
+        try {
+            const token = localStorage.getItem("access_token");
+            const response = await fetch(`http://localhost:5000/api/generation/summary/${sessionId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+            setStoredSummaries(data.summaries || []);
+        } catch (error) {
+            console.error("Failed to fetch stored summaries:", error);
+        }
+    };
+
     useEffect(() => {
         
 
 
         fetchHistory();
         fetchQCM();
+        fetchSummaries();
     }, [sessionId]);
 
     const handleSend = async () => {
@@ -318,6 +460,43 @@ const handleStop = () => {
                         <h2>Discussion</h2>
                     </div>
                     <div className={classes.headerActions}>
+                        <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+                            <DialogTrigger asChild>
+                                <button className={classes.iconBtn} title="Add Document">
+                                    <FilePlus size={18} />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
+                                <DialogHeader>
+                                    <DialogTitle className="text-white">Upload Files</DialogTitle>
+                                </DialogHeader>
+                                <div className="flex flex-col gap-4 mt-4">
+                                    <div className="border-2 border-dashed border-zinc-800 rounded-xl p-12 flex flex-col items-center justify-center hover:border-zinc-700 transition-colors cursor-pointer group">
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            id="fileUpload"
+                                            onChange={handleFileChange} 
+                                        />
+                                        <label htmlFor="fileUpload" className="flex flex-col items-center cursor-pointer">
+                                            <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center mb-4 group-hover:bg-white group-hover:text-black transition-all">
+                                                <Plus size={24} />
+                                            </div>
+                                            <span className="text-zinc-400 font-medium">
+                                                {selectedFile ? selectedFile.name : "Click to select or drag and drop"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <Button 
+                                        className="w-full bg-white text-black hover:bg-zinc-200 transition-colors font-bold h-12 rounded-xl"
+                                        onClick={handleUpload} 
+                                        disabled={isUploading || isProcessing || !selectedFile}  
+                                    >
+                                        {isUploading ? "Uploading..." : isProcessing ? "Processing (This takes a while)..." : "Upload to RAG"}
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                         <button className={classes.iconBtn}>
                             <Settings size={18} />
                         </button>
@@ -395,7 +574,7 @@ const handleStop = () => {
                     </div>
                 </div>
                 <div className={classes.studioContent}>
-                    {!qcmData && !practiceQuestion ? (
+                    {!qcmData && !practiceQuestion && !summaryData ? (
                         <div className={classes.studioOverview}>
                             <div className={classes.studioEmpty}>
                                 <div className={classes.studioCard} onClick={() => setShowModal(true)}>
@@ -405,6 +584,23 @@ const handleStop = () => {
                                 <div className={classes.studioCard} onClick={() => setShowPracticeModal(true)}>
                                     <h3>Practice Mode</h3>
                                     <p>Generate an open-ended question to deeply test your comprehension.</p>
+                                </div>
+                                <div 
+                                    className={classes.studioCard} 
+                                    onClick={isGeneratingSummary ? undefined : handle_summary}
+                                    style={{ opacity: isGeneratingSummary ? 0.7 : 1, cursor: isGeneratingSummary ? 'auto' : 'pointer' }}
+                                >
+                                    {isGeneratingSummary ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span className={classes.spinner} style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }}></span>
+                                            <h3>Generating Summary...</h3>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <h3>Generate Summary</h3>
+                                            <p>Create a concise summary of the documents from this session.</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             
@@ -431,6 +627,28 @@ const handleStop = () => {
                                             >
                                                 <h4>Quiz #{index + 1}</h4>
                                                 <p>{parsedData.length} Questions</p>
+                                            </div>
+                                        )})}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Insert your stored Summaries array mapping here */}
+                            {storedSummaries && storedSummaries.length > 0 && (
+                                <div className={classes.storedQcmSection}>
+                                    <h3 className={classes.storedQcmTitle}>Your Saved Summaries</h3>
+                                    <div className={classes.storedQcmGrid}>
+                                        {storedSummaries.map((summaryRecord, index) => {
+                                            return (
+                                            <div 
+                                                key={summaryRecord.id || index} 
+                                                className={classes.storedQcmItem}
+                                                onClick={() => {
+                                                    setSummaryData(summaryRecord.output); 
+                                                }}
+                                            >
+                                                <h4>Summary #{index + 1}</h4>
+                                                <p>{new Date(summaryRecord.created_at).toLocaleDateString()}</p>
                                             </div>
                                         )})}
                                     </div>
@@ -565,6 +783,25 @@ const handleStop = () => {
                                 </button>
                             </div>
                         </div>
+                    ) : summaryData ? (
+                        <div className={classes.qcmContainer}>
+                            <div className={classes.qcmHeader}>
+                                <h3>Document Summary</h3>
+                            </div>
+                            <div className={classes.qcmList} style={{ padding: "20px", overflowY: "auto" }}>
+                                <div style={{ lineHeight: "1.6" }}>
+                                    <ReactMarkdown>{summaryData}</ReactMarkdown>
+                                </div>
+                            </div>
+                            <div className={classes.qcmActions}>
+                                <button 
+                                    className={classes.newQcmBtn}
+                                    onClick={() => setSummaryData(null)}
+                                >
+                                    Close Summary
+                                </button>
+                            </div>
+                        </div>
                     ) : null}
                 </div>
             </div>
@@ -586,10 +823,27 @@ const handleStop = () => {
                                         onClick={() => setNumQuestions(5)}
                                     >5</button>
                                     <button 
-                                        className={`${classes.modalOptionBtn} ${numQuestions === 10 ? classes.modalOptionBtnSelected : ''}`}
-                                        onClick={() => setNumQuestions(10)}
-                                    >10</button>
+                                        className={`${classes.modalOptionBtn} ${numQuestions === 15 ? classes.modalOptionBtnSelected : ''}`}
+                                        onClick={() => setNumQuestions(15)}
+                                    >15</button>
+                                    <button 
+                                        className={`${classes.modalOptionBtn} ${numQuestions === 20 ? classes.modalOptionBtnSelected : ''}`}
+                                        onClick={() => setNumQuestions(20)}
+                                    >20</button>
                                 </div>
+                                <label className={classes.modalLabel}>Type:</label>
+                                <div className={classes.modalButtonGroup}>
+                                    <button 
+                                        className={`${classes.modalOptionBtn} ${numQuestions === 5 ? classes.modalOptionBtnSelected : ''}`}
+                                        onClick={() => setNumQuestions(5)}
+                                    >QCU</button>
+                                    <button 
+                                        className={`${classes.modalOptionBtn} ${numQuestions === 1 ? classes.modalOptionBtnSelected : ''}`}
+                                       
+                                    >QCM</button>
+                                  
+                                </div>
+
                             </div>
 
                             <div className={classes.modalOptionGroup}>

@@ -8,11 +8,16 @@ from entities.models import Session, Document, db
 UPLOAD_FOLDER= './uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def save_file(file, etudiant):
-    #create a new session for the etudiant
-    new_session = Session(id_etudiant=etudiant.id)
-    db.session.add(new_session)
-    db.session.commit()
+def save_file(file, etudiant, id_session=None):
+    if id_session:
+        session = Session.query.get(id_session)
+        if not session or session.id_etudiant != etudiant.id:
+            return {"message": "Invalid session or access denied"}, 403
+    else:
+        # Create a new session for the etudiant
+        session = Session(id_etudiant=etudiant.id)
+        db.session.add(session)
+        db.session.commit()
 
     #save the file
     filename=secure_filename(file.filename)
@@ -20,7 +25,7 @@ def save_file(file, etudiant):
     file.save(filepath)
 
      #create a new document for the session
-    new_document = Document(id_session=new_session.id, title=file.filename, path=filepath)
+    new_document = Document(id_session=session.id, title=file.filename, path=filepath)
     db.session.add(new_document)
     db.session.commit() 
 
@@ -28,7 +33,7 @@ def save_file(file, etudiant):
         "message": "file saved successfully",
         "filepath": filepath,
         "id_document": new_document.id,
-        "id_session": new_session.id
+        "id_session": session.id
 
     }, 200
 
@@ -39,7 +44,7 @@ def extract_text(file_path: str):
         logging.error(f"Fast partition failed for {file_path}: {e}")
         elements = []
 
-    if not elements or sum(len(e.text or "") for e in elements) < 100:
+    if not elements or sum(len(e.text or "") for e in elements) < 20:
         try:
             elements = partition(file_path, strategy="hi_res")
         except Exception as e:

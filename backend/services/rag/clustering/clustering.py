@@ -32,7 +32,7 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def cluster_chunks(chunks, embeddings, min_cluster_size=2, min_samples=2):
+def cluster_chunks(chunks, embeddings, min_cluster_size=3, min_samples=3):
     normed = normalize(embeddings, norm="l2")
     model = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,

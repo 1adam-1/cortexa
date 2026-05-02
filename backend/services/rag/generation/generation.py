@@ -80,6 +80,16 @@ Example of the expected JSON output:
 }
 """
 
+#Summary prompt
+SYSTEM_PROMPT_SUMMARY = """You are a highly skilled document summarization assistant.
+CRITICAL RULES:
+1. Provide a concise, clear, and comprehensive summary of the provided context.
+2. Highlight the main concepts, findings, and arguments.
+3. Do not invent or hallucinate information. You must rely strictly on the provided context.
+4. Maintain a professional and objective tone.
+5. Keep the summary well-structured, using bullet points for key takeaways if appropriate.
+"""
+
 import json
 import re
 
@@ -109,6 +119,8 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
         SYSTEM_PROMPT = SYSTEM_PROMPT_PRACTICE_QUESTION
     elif type == "practice_evaluation":
         SYSTEM_PROMPT = SYSTEM_PROMPT_PRACTICE_EVALUATION
+    elif type == "summary":
+        SYSTEM_PROMPT = SYSTEM_PROMPT_SUMMARY
     else:
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
     
@@ -166,6 +178,8 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", m
         SYSTEM_PROMPT = SYSTEM_PROMPT_PRACTICE_QUESTION
     elif type == "practice_evaluation":
         SYSTEM_PROMPT = SYSTEM_PROMPT_PRACTICE_EVALUATION
+    elif type == "summary":
+        SYSTEM_PROMPT = SYSTEM_PROMPT_SUMMARY
     else:
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
 

@@ -27,6 +27,7 @@ print("models loaded")
 @pipeline_rag_bp.route("/api/upload", methods=["POST"])
 @jwt_required()
 def upload_file():
+    id_session = request.form.get("id_session", None)
     if "file" not in request.files:
         return jsonify ({"message": "No file part"}), 400
     
@@ -38,7 +39,7 @@ def upload_file():
     current_user_id = get_jwt_identity()
     etudiant = Etudiant.query.get(current_user_id)
 
-    data, code = save_file(file, etudiant)
+    data, code = save_file(file, etudiant, id_session=id_session)
     return jsonify(data), code
 
 
@@ -72,7 +73,6 @@ def processing_file():
 
     #CLUSTERING + CONCEPT EXTRACTION
     clusters, noise = cluster_chunks(chunks, embeddings)
-    print(f"Found {len(clusters)} clusters and {len(noise)} noise chunks")
     concepts = []
     for cluster_id, chunk_list in clusters.items():
         # Create the cluster for the database
@@ -90,7 +90,7 @@ def processing_file():
                 id_cluster=new_cluster.id,
             )
             db.session.add(new_cluster_chunk)
-        db.session.commit() # Commit all chunks for this cluster
+        db.session.commit() 
 
         output_str = extract_concept_from_clusters(chunk_list, generation_model, tokenizer, cluster_id)
         
@@ -147,16 +147,19 @@ def user_chat():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
 
-    document = Document.query.filter_by(id_session=session_id).first()
-    if not document:
+    documents = Document.query.filter_by(id_session=session_id).all()
+    if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-    chunks = Chunk.query.filter_by(id_document=document.id).all()
+    final_retrieved_chunks=[]
+    for document in documents:
+        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
+        final_retrieved_chunks.extend(retrievd_chunks)
 
-    retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = retrievd_chunks + concepts
+    all_candidates = final_retrieved_chunks + concepts
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, question, type="qa")
@@ -229,37 +232,6 @@ def user_chat():
     
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
-@pipeline_rag_bp.route("/api/sessions/<int:session_id>/messages", methods=["GET"])
-@jwt_required()
-def get_chat_history(session_id):
-    current_user_id = int(get_jwt_identity())
-    session_obj = Session.query.get(session_id)
-    
-    if not session_obj or session_obj.id_etudiant != current_user_id:
-        return jsonify({"message": "Access denied"}), 403
-
-    messages = Chat_message.query.filter_by(id_session=session_id).order_by(Chat_message.created_at.asc()).all()
-    
-    history = []
-    for msg in messages:
-        history.append({
-            "id": msg.id,
-            "role": "user",
-            "content": msg.content,
-            "created_at": msg.created_at.isoformat()
-        })
-        
-       
-        gen = db.session.query(Generation).filter_by(id_chat=msg.id).first()
-        if gen:
-            history.append({
-                "id": f"gen_{gen.id}",
-                "role": "assistant",
-                "content": gen.output,
-                "created_at": gen.created_at.isoformat()
-            })
-            
-    return jsonify(history), 200
 
 
 #QCM
@@ -278,16 +250,19 @@ def generate_qcm():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
 
-    document = Document.query.filter_by(id_session=session_id).first()
-    if not document:
+    documents = Document.query.filter_by(id_session=session_id).all()
+    if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-    chunks = Chunk.query.filter_by(id_document=document.id).all()
+    final_retrieved_chunks=[]
+    for document in documents:
+        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
+        final_retrieved_chunks.extend(retrievd_chunks)
 
-    retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = retrievd_chunks + concepts
+    all_candidates = final_retrieved_chunks + concepts
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, question, type="qcm", num_questions=num_questions, difficulty=difficulty)
@@ -337,25 +312,6 @@ def generate_qcm():
     return jsonify({"qcm": parsed_qcm}), 200
 
 
-@pipeline_rag_bp.route("/api/generation/qcm/<int:session_id>", methods=["GET"])
-@jwt_required()
-def get_qcm_generation(session_id):
-    generations = db.session.query(Generation).filter_by(id_session=session_id, type="QCM").order_by(Generation.created_at.desc()).all()
-
-    if not generations:
-        return jsonify({"qcms": []}), 200
-    
-    generation_history = []
-    for gen in generations:
-        generation_history.append({
-            "id": gen.id,
-            "query": gen.query,
-            "output": gen.output,
-            "created_at": gen.created_at.isoformat(),
-        })
-
-    return jsonify({"qcms": generation_history}), 200
-
 
 # PRACTICE: Generate a single question
 @pipeline_rag_bp.route("/api/studio/practice/question", methods=["POST"])
@@ -371,16 +327,19 @@ def generate_practice_question():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
 
-    document = Document.query.filter_by(id_session=session_id).first()
-    if not document:
+    documents = Document.query.filter_by(id_session=session_id).all()
+    if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-    chunks = Chunk.query.filter_by(id_document=document.id).all()
+    final_retrieved_chunks=[]
+    for document in documents:
+        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
+        final_retrieved_chunks.extend(retrievd_chunks)
 
-    retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = retrievd_chunks + concepts
+    all_candidates = final_retrieved_chunks + concepts
 
     reranked_items = rerank_unified(topic, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, topic, type="practice_question")
@@ -443,17 +402,19 @@ def evaluate_practice_answer():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
 
-    document = Document.query.filter_by(id_session=session_id).first()
-    if not document:
+    documents = Document.query.filter_by(id_session=session_id).all()
+    if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-    chunks = Chunk.query.filter_by(id_document=document.id).all()
+    final_retrieved_chunks=[]
+    for document in documents:
+        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
+        final_retrieved_chunks.extend(retrievd_chunks)
 
-    # Re-retrieve context based on the generated question
-    retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = retrievd_chunks + concepts
+    all_candidates = final_retrieved_chunks + concepts
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     
@@ -505,7 +466,150 @@ def evaluate_practice_answer():
     return jsonify({"evaluation": parsed_eval}), 200
 
 
+#SUMMARY
+@pipeline_rag_bp.route("/api/studio/summary", methods=["POST"])
+@jwt_required()
+def generate_summary():
+    data = request.get_json()
+    session_id = data.get("session_id")
+    topic = data.get("topic", "What are the key concepts and important facts in this document?")
+    current_user_id = int(get_jwt_identity())
 
-
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
     
+    documents = Document.query.filter_by(id_session=session_id).all()
+    if not documents:
+        return jsonify({"message": "No document found for this session"}), 404
+    
+    final_retrieved_chunks=[]
+    for document in documents:
+        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
+        final_retrieved_chunks.extend(retrievd_chunks)
+    
+    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
+    all_candidates = final_retrieved_chunks + concepts
+    reranked_items = rerank_unified(topic, all_candidates, reranker)
+    context = build_context(reranked_items, tokenizer, topic, type="summary")
+
+    summary_raw_output = ""
+    for chunk in generate_answer(context, topic, tokenizer, generation_model, type="summary"):
+        summary_raw_output += chunk
+    
+    if not summary_raw_output.strip():
+        return jsonify({"message": "Failed to generate a summary", "raw": summary_raw_output}), 500
+    
+    new_generation = Generation(
+        id_session=session_id,
+        id_chat=None,
+        type="Summary",
+        query=topic,
+        output=summary_raw_output.strip(),
+        model=generation_model.name_or_path,
+        source="studio",
+    )
+    db.session.add(new_generation)
+    db.session.commit()
+
+    for item in reranked_items:
+        if hasattr(item, "content"):
+            new_rag_context_chunk = Rag_context_chunk(
+                id_generation=new_generation.id,
+                id_chunk=item.id,
+                reranker_model="reranker",
+                rerank_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_chunk)
+
+        elif hasattr(item, "definition"):
+            new_rag_context_concept = Rag_context_concept(
+                id_generation=new_generation.id,
+                id_concept=item.id,
+                similarity_score=getattr(item, "rerank_score", 0.0),
+            )
+            db.session.add(new_rag_context_concept)
+    db.session.commit()
+
+    return jsonify({"summary": summary_raw_output.strip()}), 200
+
+
+#Fetching data from db
+
+#Fetching QCM
+@pipeline_rag_bp.route("/api/generation/qcm/<int:session_id>", methods=["GET"])
+@jwt_required()
+def get_qcm_generation(session_id):
+    generations = db.session.query(Generation).filter_by(id_session=session_id, type="QCM").order_by(Generation.created_at.desc()).all()
+
+    if not generations:
+        return jsonify({"qcms": []}), 200
+    
+    generation_history = []
+    for gen in generations:
+        generation_history.append({
+            "id": gen.id,
+            "query": gen.query,
+            "output": gen.output,
+            "created_at": gen.created_at.isoformat(),
+        })
+
+    return jsonify({"qcms": generation_history}), 200
+
+
+#Fetching chat history
+@pipeline_rag_bp.route("/api/sessions/<int:session_id>/messages", methods=["GET"])
+@jwt_required()
+def get_chat_history(session_id):
+    current_user_id = int(get_jwt_identity())
+    session_obj = Session.query.get(session_id)
+    
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
+    messages = Chat_message.query.filter_by(id_session=session_id).order_by(Chat_message.created_at.asc()).all()
+    
+    history = []
+    for msg in messages:
+        history.append({
+            "id": msg.id,
+            "role": "user",
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat()
+        })
+        
+       
+        gen = db.session.query(Generation).filter_by(id_chat=msg.id).first()
+        if gen:
+            history.append({
+                "id": f"gen_{gen.id}",
+                "role": "assistant",
+                "content": gen.output,
+                "created_at": gen.created_at.isoformat()
+            })
+            
+    return jsonify(history), 200
+
+
+#Fetching summaries
+@pipeline_rag_bp.route("/api/generation/summary/<int:session_id>", methods=["GET"])
+@jwt_required()
+def get_summaries(session_id):
+    generations =  db.session.query(Generation).filter_by(id_session=session_id, type="Summary").order_by(Generation.created_at.desc()).all()
+    if not generations:
+        return jsonify({"summaries": []}), 200
+    
+    summaries = []
+    for gen in generations:
+        summaries.append({
+            "id": gen.id,
+            "query": gen.query,
+            "output": gen.output,
+            "created_at": gen.created_at.isoformat(),
+        })
+    
+    return jsonify({"summaries": summaries}), 200
+
 

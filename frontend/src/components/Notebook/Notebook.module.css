@@ -355,6 +355,11 @@
     margin: 0;
 }
 
+.headerActions {
+    display: flex;
+    gap: 1rem;
+}
+
 /* QCM Styles */
 .qcmContainer {
     display: flex;

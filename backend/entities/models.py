@@ -137,6 +137,8 @@ class Generation(db.Model):
     created_at=db.Column(db.DateTime, default=datetime.utcnow)
     session=db.relationship("Session", backref=db.backref("generations", cascade="all, delete-orphan"))
     chat_message=db.relationship("Chat_message", backref=db.backref("generations", cascade="all, delete-orphan"))
+    rag_context_chunks=db.relationship("Rag_context_chunk", backref="generation", cascade="all, delete-orphan")
+    rag_context_concepts=db.relationship("Rag_context_concept", backref="generation", cascade="all, delete-orphan")
     
 
 
