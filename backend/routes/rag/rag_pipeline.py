@@ -1,5 +1,5 @@
 from flask import json, request, jsonify, Blueprint
-from services.rag.ingestion.ingestion import save_file, extract_text
+from services.rag.ingestion.ingestion import save_file, extract_text, create_gemini_client
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
 from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
@@ -21,6 +21,7 @@ pipeline_rag_bp = Blueprint("pipeline_rag", __name__)
 print("loading models...")
 embedding_model, reranker = load_embedding_models()
 tokenizer, generation_model = load_generation_model()
+gemini_client = create_gemini_client()
 print("models loaded")
 
 #upload file
@@ -65,7 +66,7 @@ def processing_file():
     
     #EXTRACTING + CHUNKING + EMBEDDING + INDEXING
     path = document.path
-    sections = extract_text(path)
+    sections = extract_text(path, gemini_client)
     chunks = chunk_text_by_tokens(document.id, sections, tokenizer)
     embeddings = compute_embeddings(chunks, embedding_model)
     index = create_faiss_index(chunks, embeddings)

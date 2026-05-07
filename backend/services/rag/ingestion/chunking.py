@@ -4,7 +4,7 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_tokens=100, overlap=1):
+def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_tokens=50, overlap=1):
 
     chunks=[]
     for section in sections:
@@ -19,7 +19,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
         for item in items:
             token_length = count_tokens(item, tokenizer)
 
-            if item.startswith("[TABLE]"):
+            if item.startswith("[TABLE]") and token_length > max_tokens:
                 if current_chunk:
                     #save the chunk in the database
                     new_chunk = Chunk(id_document=document_id,
@@ -69,7 +69,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                 current_token += token_length
 
             else:
-                if current_token > 0:
+                if current_token > min_tokens:
                     #save the chunk in the database
                     new_chunk = Chunk(id_document=document_id,
                                     title=title,
@@ -96,7 +96,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                     current_token = sum( count_tokens(x, tokenizer) for x in current_chunk)
 
     
-        if current_chunk and current_token > 0:
+        if current_chunk and current_token > min_tokens:
             #save the chunk in the database
             new_chunk = Chunk(id_document=document_id,
                             title=title,
