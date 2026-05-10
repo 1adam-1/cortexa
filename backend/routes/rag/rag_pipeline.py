@@ -3,7 +3,7 @@ from services.rag.ingestion.ingestion import save_file, extract_text, create_gem
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
 from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
-from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_chunks, rerank_unified
+from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_unified
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models

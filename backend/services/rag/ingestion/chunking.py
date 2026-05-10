@@ -57,7 +57,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
                 chunks.append({
                     "id": new_chunk.id,
                     "title": title,
-                    "type": types,
+                    "types": types,
                     "content": item,
                     "pages": pages,
                 })
@@ -110,7 +110,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_to
             chunks.append({
                 "id": new_chunk.id,
                 "title": title,
-                "type": types,
+                "types": types,
                 "content": "\n".join(current_chunk),
                 "pages": pages,
             })

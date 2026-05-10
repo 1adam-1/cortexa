@@ -150,18 +150,24 @@ def build_structured_output(elements, gemini_client) -> list:
             continue
 
         if isinstance(el, Title):
-            if current_section["content"]:
-                structured_output.append({
-                    **current_section,
-                    "types": list(current_section["types"]),
-                    "pages": sorted(current_section["pages"]),
-                })
-            current_section = {
-                "title": text,
-                "types": set(),
-                "content": [],
-                "pages": {page} if page else set(),
-            }
+            # heuristique : si le texte est trop long, ce n'est probablement pas un titre
+            if len(text) > 100:
+                current_section["content"].append(text)
+                current_section["types"].add("NarrativeText")
+                if page: current_section["pages"].add(page)
+            else:
+                if current_section["content"]:
+                    structured_output.append({
+                        **current_section,
+                        "types": list(current_section["types"]),
+                        "pages": sorted(current_section["pages"]),
+                    })
+                current_section = {
+                    "title": text,
+                    "types": set(),
+                    "content": [],
+                    "pages": {page} if page else set(),
+                }
         elif isinstance(el, NarrativeText):
             current_section["content"].append(text)
             current_section["types"].add("NarrativeText")
