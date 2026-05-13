@@ -2,28 +2,30 @@ from entities.models import Chunk, Concept
 import faiss
 
 
-def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=40):
+def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=40, threshold=0.3):
     k = min(k, len(chunks))
     if k == 0:
         return []
 
     chunk_map = {chunk.id: chunk for chunk in chunks}
 
-    question_embedded = embedding_model.encode(
-        ["Represent this sentence for searching relevant passages: " + question]
-    ).astype("float32")
+    question_embedded = embedding_model.encode(["Represent this sentence for searching relevant passages: " + question]).astype("float32")
     faiss.normalize_L2(question_embedded)
     scores, indices = index.search(question_embedded, k)
 
     top_chunks = []
     for i in range(k):
+        score = float(scores[0][i])
         idx = int(indices[0][i])
-        if idx == -1:
+        
+        # Filtrer avec le threshold (seuil de similarité)
+        if score < threshold or idx == -1:
             continue
         
         # Look up the chunk in our map using the ID returned by Faiss
         chunk = chunk_map.get(idx)
         if chunk:
+            chunk.faiss_score = score
             top_chunks.append(chunk)
 
     return top_chunks
@@ -62,43 +64,10 @@ def rerank_unified(question, items, reranker, top_n=8):
         item.rerank_score = float(score)
 
     items = sorted(items, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
-    return items[:top_n]
+    filtered = [item for item in items[:top_n] if item.rerank_score > 0.0]
+    return filtered if len(filtered) >= 2 else items[:2]
 
 
-def retrieve_top_concepts(query, concepts : list[Concept], index, embedding_model, k=20):
-    k = min(k, len(concepts))
-    if k == 0:
-        return []
-
-    concept_map = {concept.id: concept for concept in concepts}
-    query_embedded = embedding_model.encode(
-        ["Represent this sentence for searching relevant concepts: " + query]
-    ).astype("float32")
-
-    faiss.normalize_L2(query_embedded)
-    scores, indices = index.search(query_embedded, k)
-
-    top_concepts=[]
-    for i in range(k):
-        idx=int(indices[0][i])
-        if idx == -1:
-            continue
-
-        concept=concept_map.get(idx)
-        if concept:
-            top_concepts.append(concept)
-    
-    return top_concepts
-
-def rerank_concepts(query, concepts : list[Concept], reranker, top_n=4):
-    pairs= [(query, concept.definition) for concept in concepts]
-    scores = reranker.predict(pairs, batch_size=16)
-
-    for concept, score in zip(concepts, scores):
-        concept.rerank_score = float(score)
-    
-    concepts = sorted(concepts, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
-    return concepts[:top_n]
 
 
 

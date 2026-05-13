@@ -36,6 +36,7 @@ export default function Notebook() {
     const [summaryData, setSummaryData] = useState(null);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [storedSummaries, setStoredSummaries] = useState([]);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
 
     // Upload specific states
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -274,8 +275,9 @@ export default function Notebook() {
 
     
       //Summary generation
-    const handle_summary=async()=>{
+    const handle_summary=async(type = "general")=>{
         try{
+            setShowSummaryModal(false);
             setIsGeneratingSummary(true);
             const token = localStorage.getItem("access_token");
 
@@ -286,7 +288,8 @@ export default function Notebook() {
                     "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    session_id: sessionId
+                    session_id: sessionId,
+                    summary_type: type
                 })
             });
 
@@ -587,7 +590,7 @@ const handleStop = () => {
                                 </div>
                                 <div 
                                     className={classes.studioCard} 
-                                    onClick={isGeneratingSummary ? undefined : handle_summary}
+                                    onClick={isGeneratingSummary ? undefined : () => setShowSummaryModal(true)}
                                     style={{ opacity: isGeneratingSummary ? 0.7 : 1, cursor: isGeneratingSummary ? 'auto' : 'pointer' }}
                                 >
                                     {isGeneratingSummary ? (
@@ -604,6 +607,31 @@ const handleStop = () => {
                                 </div>
                             </div>
                             
+                            <Dialog open={showSummaryModal} onOpenChange={setShowSummaryModal}>
+                                <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
+                                    <DialogHeader>
+                                        <DialogTitle className="text-white">Générer un résumé</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="flex flex-col gap-4 mt-4">
+                                        <p className="text-zinc-400">Quel type de résumé souhaitez-vous générer ?</p>
+                                        <div className="flex gap-4">
+                                            <Button 
+                                                className="flex-1 bg-white text-black hover:bg-zinc-200 transition-colors"
+                                                onClick={() => handle_summary("detaillé")}
+                                            >
+                                                Détaillé
+                                            </Button>
+                                            <Button 
+                                                className="flex-1 bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"
+                                                onClick={() => handle_summary("general")}
+                                            >
+                                                Général
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
                             {/* Insert your stored QCMs array mapping here */}
                             {storedQCMs && storedQCMs.length > 0 && (
                                 <div className={classes.storedQcmSection}>

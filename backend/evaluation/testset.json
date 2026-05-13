@@ -1,6 +1,6 @@
 {
-  "total": 48,
-  "requested_test_size": 45,
+  "total":"" ,
+  "requested_test_size": "",
   "document_ids": [
     55,
     56,
@@ -8,15 +8,6 @@
     68
   ],
   "samples": [
-    {
-      "user_input": "What are the primary uses of TypeScript?",
-      "reference": "TypeScript is used to create efficient web and mobile applications, specifically for front-end development and single-page applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
     {
       "user_input": "How does Data Visualization contribute to Business Intelligence?",
       "reference": "Data Visualization is a crucial component of Business Intelligence as it enables users to quickly visualize important information and make it accessible for analysis.",
@@ -47,15 +38,6 @@
       ],
       "retrieved_contexts": null,
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "Wat is typescrypt?",
-      "reference": "TypeScript was presented by Google in 2009 and allows creating web and mobile applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
     },
     {
       "user_input": "How does Hadoop's HDFS component contribute to the framework's ability to handle large-scale data processing and ensure fault tolerance?",
@@ -138,15 +120,6 @@
       "synthesizer_name": "single_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "What is the TypeScript framework?",
-      "reference": "TypeScript is a JavaScript framework presented by Google in 2009, allowing for the creation of web and mobile applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
       "user_input": "How does the Secondary NameNode in Hadoop contribute to high availability and what are the steps involved in recovering a failed NameNode?",
       "reference": "The Secondary NameNode in Hadoop contributes to high availability by replicating metadata from the NameNode, preventing loss of metadata and maintaining recent copies. However, it does not provide immediate high availability as clients cannot read, write, or list files if the NameNode fails due to it being the sole reference for metadata and file-block mapping. To recover a failed NameNode, an administrator starts a new NameNode with one of the metadata copies from the filesystem and configures DataNodes and applications to use this new NameNode.",
       "reference_contexts": [
@@ -176,26 +149,6 @@
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "Could you elaborate on the origins and primary uses of Google's JavaScript Framework?",
-      "reference": "Google's JavaScript Framework, initially presented in 2009, is designed to create web and mobile applications. It focuses primarily on Front-End development, which encompasses all visible and accessible elements directly on a web or mobile application. Additionally, it supports the creation of Single Page Applications (SPAs), where a single HTML page is retrieved from the server.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "How doe's the ETL processe work in Business Intelligence?",
-      "reference": "The ETL process in Business Intelligence works by extracting data from various internal and external sources such as operational systems, web, CRM, ERP, etc., transforming it to fit a specific purpose or format, and then loading it into a database for analysis.",
-      "reference_contexts": [
-        "<1-hop>\n\nLa Business Intelligence s'appuie sur le processus ETL (Extract Transform Load) pour offrir à l'utilisateur la donnée la plus pertinente.",
-        "<2-hop>\n\nle processus ETL extrait les données de différentes sources internes et externes (SI opérationnel, Web, CRM, ERP, etc.).",
-        "<3-hop>\n\nElle permet de prendre des décisions et de suivre des tendances, grâce à des outils d'analyse dynamiques.\nElle offre de nouveaux moyens de gérer la performance au quotidien et d'être en mesure de réagir rapidement grâce à des tableaux de bord précis et synthétiques\nDans les entreprises, la Business Intelligence apporte un gain de temps et de fiabilité à ses utilisateurs. La finalité ultime étant\n2 - POURQUOI FAIRE DE LA BUSINESS INTELLIGENCE ? 2-1 - Les avantages de la BI dans les métiers de gestion et de la finance\nUn gain de temps considérable dans la construction et la mise à jour des reportings et des analyses ;\nDes données plus fiables, lorsque les processus de nettoyage et modélisation sont bien en place ; de\nLibérer du temps aux utilisateurs pour la stratégie, l'amélioration continue, et la gestion des risques ;"
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_abstract_query_synthesizer"
-    },
-    {
       "user_input": "How can business analytics help improve decision-making and risk management with the increasing variety and volume of digital data?",
       "reference": "Business analytics, which involves using statistical techniques to analyze and interpret data, can aid in improving decision-making and risk management by collecting, storing, analyzing digital data. This helps optimize business processes in areas like marketing or finance.",
       "reference_contexts": [
@@ -204,16 +157,6 @@
       ],
       "retrieved_contexts": null,
       "synthesizer_name": "multi_hop_abstract_query_synthesizer"
-    },
-    {
-      "user_input": "How does the use of bar graphs facilitate decision-making based on discrete data?",
-      "reference": "Bar graphs facilitate decision-making based on discrete data by providing clear visual representations of categories and their frequencies, enabling easy interpretation and comparison for data-driven decisions.",
-      "reference_contexts": [
-        "<1-hop>\n\n- L’utilisation des données numériques : collection, stockage, l’analyse…\n- Objectif : L’amélioration, la prise de décision, la prévision, la gestion des risques\n- Cette utilisation devient plus en plus compliqué avec la variété et le volume de données circulées",
-        "<2-hop>\n\n- • Facilité d'interprétation : Les barres représentent clairement les catégories et leurs fréquences, ce qui facilite l'interprétation des données.\n- • Comparaisons visuelles : de la fréquence ou la distribution des catégories, utile pour les analyses comparatives.\n- • Personnalisation : pour rendre les graphiques informatifs et esthétiques.\n- • Adaptabilité : fonctionnent pour des variables catégoriques avec un petit nombre de catégories, mais aussi pour des variables avec un nombre plus élevé de catégories.\n- • Prise de décision : Utilisés pour prendre des décisions basées sur des données discrètes."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
       "user_input": "How can I improve the performance of my machine learning models by addressing duplicate records in my dataset and ensuring proper data preparation?",
@@ -235,16 +178,6 @@
       "synthesizer_name": "single_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "How do you handle missing values in a dataset?",
-      "reference": "To handle missing values, you can use strategies such as removing rows or columns containing missing data if their number is negligible compared to the dataset size, imputing missing values with calculated values like mean, median, mode for numerical data or a categorical value for categorical data, or conserving missing values based on specific reasons.",
-      "reference_contexts": [
-        "<1-hop>\n\n- • Les données manquantes peuvent entraîner des erreurs dans l'analyse et les modèles.\n- • On utilise les méthodes isna() ou isnull() pour identifier les données manquantes.\n- • Il existe différentes stratégies pour gérer les données manquantes :\n- • Supprimer les lignes ou les colonnes contenant des données manquantes.\n- • Imputer les valeurs manquantes par la moyenne, la médiane, le mode, ou d'autres méthodes pertinentes.\n- • La stratégie dépendra du contexte et de la quantité de données manquantes.",
-        "<2-hop>\n\n- • Suppression des lignes : supprimer les lignes qui contiennent des valeurs manquantes si leur nombre est négligeable par rapport à la taille de l'ensemble de données.\n- • Imputation : remplacer les valeurs manquantes par des valeurs calculées, comme la moyenne, la médiane ou le mode pour les données numériques, ou une valeur catégorique pour les données catégoriques.\n- • Conservation des valeurs manquantes : Dans certains cas, il peut être approprié de conserver les valeurs manquantes pour des raisons spécifiques.\n- • Compter le nombre de valeurs manquantes par colonne est recommandé.\n- • Cela donne une vue d'ensemble rapide des colonnes qui ont des données manquantes."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_abstract_query_synthesizer"
-    },
-    {
       "user_input": "How does the Distributed File System manage metadata and ensure data availability across multiple nodes, specifically regarding replication on different racks?",
       "reference": "The Distributed File System manages metadata by having the NameNode store it in memory for quick access, although this requires significant memory. To ensure data availability, the system replicates file blocks across several DataNodes. The number of copies per block is controlled by a replication parameter (default is 3), and replication occurs on different racks to enhance fault tolerance.",
       "reference_contexts": [
@@ -264,24 +197,6 @@
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "What does the Frontend handle in JavaScript?",
-      "reference": "The Frontend handles the presentation on the client side.",
-      "reference_contexts": [
-        "[TABLE]\njava Script Java Script, : Node JS\n▪Le Backend : s’occupe des traitements coté serveur :\n➢Technologies : PHP, JEE, .Net, Node JS\n▪Le Frontend : s’occupe de la présentation coté client :"
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "Can you tell me about the JavaScript framework?",
-      "reference": "JavaScript is a programming language that was presented by Google in 2009. It allows for creating web and mobile applications, specifically for the Front-End (the visible and accessible parts of a web application) and Single Page Applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
       "user_input": "How does the concept of 'Big Data' address the challenges posed by voluminous data with variety and velocity, as demonstrated during its inception in 2012?",
       "reference": "The concept of 'Big Data', popularized in 2012, addresses the challenges posed by voluminous data with variety and velocity by providing an ensemble of technologies, architectures, tools, and procedures that enable organizations to rapidly collect, treat, and analyze large quantities of varied and changing contents, extracting pertinent information at an accessible cost.",
       "reference_contexts": [
@@ -293,7 +208,7 @@
       "synthesizer_name": "multi_hop_abstract_query_synthesizer"
     },
     {
-      "user_input": "How can we make 'decision makin' in real-time withe BI tools?",
+      "user_input": "How can we make 'decision making' in real-time with BI tools?",
       "reference": "Business Intelligence tools allow access to data in real-time and transform it through web applications, enabling real-time decision-making.",
       "reference_contexts": [
         "<1-hop>\n\nElle permet de prendre des décisions et de suivre des tendances, grâce à des outils d'analyse dynamiques.\nElle offre de nouveaux moyens de gérer la performance au quotidien et d'être en mesure de réagir rapidement grâce à des tableaux de bord précis et synthétiques\nDans les entreprises, la Business Intelligence apporte un gain de temps et de fiabilité à ses utilisateurs. La finalité ultime étant\n2 - POURQUOI FAIRE DE LA BUSINESS INTELLIGENCE ? 2-1 - Les avantages de la BI dans les métiers de gestion et de la finance\nUn gain de temps considérable dans la construction et la mise à jour des reportings et des analyses ;\nDes données plus fiables, lorsque les processus de nettoyage et modélisation sont bien en place ; de\nLibérer du temps aux utilisateurs pour la stratégie, l'amélioration continue, et la gestion des risques ;",
@@ -321,39 +236,10 @@
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "What are the main uses of JavaScript?",
-      "reference": "JavaScript is used to create web and mobile applications, specifically for the Front-End (visible elements on a webpage) and Single Page Applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "How can missing values in data be handled effectively using Python's pandas library?",
-      "reference": "In Python's pandas library, missing values can be identified using methods like isna() or isnull(). To handle them, you can choose strategies such as removing the rows or columns with missing data, imputing missing values with mean, median, mode, or other appropriate methods. The choice of strategy depends on the context and the amount of missing data.",
-      "reference_contexts": [
-        "<1-hop>\n\n- • Les valeurs manquantes peuvent biaiser les analyses et les modèles si elles ne sont pas correctement traitées.\n- • Elles peuvent indiquer des problèmes de collecte de données ou des erreurs dans les données.\n- • Identifier les valeurs manquantes est la première étape pour décider comment les gérer.",
-        "<2-hop>\n\n- • Les données manquantes peuvent entraîner des erreurs dans l'analyse et les modèles.\n- • On utilise les méthodes isna() ou isnull() pour identifier les données manquantes.\n- • Il existe différentes stratégies pour gérer les données manquantes :\n- • Supprimer les lignes ou les colonnes contenant des données manquantes.\n- • Imputer les valeurs manquantes par la moyenne, la médiane, le mode, ou d'autres méthodes pertinentes.\n- • La stratégie dépendra du contexte et de la quantité de données manquantes."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_abstract_query_synthesizer"
-    },
-    {
       "user_input": "What is the mode used for in data imputation?",
       "reference": "The mode, which is the value that appears most frequently in a dataset, can be used for data imputation to replace missing values with the most common value in that column.",
       "reference_contexts": [
         "<1-hop>\n\n- • Suppression des lignes : supprimer les lignes qui contiennent des valeurs manquantes si leur nombre est négligeable par rapport à la taille de l'ensemble de données.\n- • Imputation : remplacer les valeurs manquantes par des valeurs calculées, comme la moyenne, la médiane ou le mode pour les données numériques, ou une valeur catégorique pour les données catégoriques.\n- • Conservation des valeurs manquantes : Dans certains cas, il peut être approprié de conserver les valeurs manquantes pour des raisons spécifiques.\n- • Compter le nombre de valeurs manquantes par colonne est recommandé.\n- • Cela donne une vue d'ensemble rapide des colonnes qui ont des données manquantes."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "How does Zookeeper help in the high availability of HDFS?",
-      "reference": "Zookeeper helps in the high availability of HDFS by detecting failures of the active NameNode and initiating a failover to the passive NameNode. It also provides a mechanism for electing an active NameNode when there are multiple candidates.",
-      "reference_contexts": [
-        "<1-hop>\n\n- = Hbase : Base de donnees NoSQL orientée colonnes.\n- = Sqoop: Lecture et ecriture des données a partir de BD externes\n- = Flume: Collecte de logs et stockage dans HDFS\n- « * * = Ambari: outil pour la gestion et monitoring des clusters\n- = Zookeeper: fournit un_ service centralise pour maintenir les information de configuration, de nommage et de _ synchronisation distribuee",
-        "<2-hop>\n\n- . Le NameNode actif et le NameNode passif communiquent avec un groupe (quorum) de JournalNodes (généralement 3)\n- . Le NameNode actif envole les “edits” (logs) aux JounalNodes pour les partager avec le NameNode passif.\n- Le NameNode passif récupere les ‘edits’ depuis l'un des JournalNodes et les applique a la copie Fsimage qu'il a afin de la synchroniser avec celle du NameNode actif.\n- Les DataNodes envoient périodiquement les rapports sur les blocs aux NameNodes actif et passit.\n- Zookeeper est un démon de coordination utilisé pour coordonner le basculement rapide du NameNode actif vers le NameNode passif. Zookeeper a deux fonctions dans un cluster HDFS haute disponibilite:\n- * Detecter une défaillance du NameNode actif. Les deux NameNodes conservent une session active dans Zookeeper. Lorsqu'il y a défaillance du NameNode actif, 7ooKeeper détecte cette défaillance suite a l'interruption de la session du NameNode actif.\n- * JooKeeper initie un basculement vers NameNode passif et fournit un mécanisme pour la ‘election du NameNode actif lorsqu’'il y a plusieurs candidats ( NameNodes passtis)"
       ],
       "retrieved_contexts": null,
       "synthesizer_name": "multi_hop_specific_query_synthesizer"

@@ -8,20 +8,15 @@ SAFETY_MARGIN = 50
 DEFAULT_BUDGET_INPUT = MODEL_LIMIT - MAX_OUTPUT - SAFETY_MARGIN
 
 #Q/A prompt
-SYSTEM_PROMPT_QA = """You are a strict RAG assistant specialized in document analysis.
-CRITICAL RULES:
-1. ABSOLUTE LANGUAGE RULE: You MUST detect the language of the user's question (e.g., Arabic, English, French) and MUST reply EXCLUSIVELY in that EXACT SAME language. If the question is in Arabic, you MUST answer in Arabic.
-2. Analyze the question to identify the user's intent.
-3. IF THE QUESTION IS A GREETING (e.g., Hello, Hi, Bonjour, Salam):
-   * Reply pleasantly in the SAME language and ask how you can help with their documents.
-   * Ignore strict structure rules and context for these cases.
-4. IF THE QUESTION IS ABOUT DOCUMENTS (RAG):
-   * Prioritize the provided context to answer.
-   * Only answer if the information is present or clearly deductible from the context.
-   * If information is insufficient, state it clearly in the same language as the question.
-   * Always cite the source extract and page number if it's available in the context (e.g., "[Source: Extrait 1, Page: 5]").
-5. Highlight key concepts in **bold**.
-6. Never invent information. Do not use external knowledge for document questions.
+SYSTEM_PROMPT_QA = """
+You are a direct, concise, and professional multilingual RAG assistant.
+
+Rules:
+- Answer ONLY using the provided context. Do not use outside knowledge.
+- Detect the language of the QUESTION and answer STRICTLY in that same language.
+- CRITICAL: DO NOT add conversational filler, meta-commentary, or greetings. Never say "The answer is in French because...", "Voici la réponse", or "Here is the answer". Start directly with your findings.
+- If the context does not contain the answer, reply ONLY with a polite statement saying the information is missing (in the exact language of the QUESTION), and nothing else.
+- Be concise and objective.
 """
 
 # QCM prompt
@@ -123,7 +118,12 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
         SYSTEM_PROMPT = SYSTEM_PROMPT_SUMMARY
     else:
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
-    
+
+    chunks =[item for item in items if hasattr(item, "content")]
+    concepts = [item for item in items if hasattr(item, "definition")]
+
+    chunks = sorted(chunks, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
+    concepts = sorted(concepts, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
 
     messages = [
         {
@@ -132,38 +132,48 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
         },
         {
             "role": "user",
-            "content": f"""QUESTION:
-        {question}
-
-        CONTEXT:
-
-        ANSWER:"""
+            "content": f"""
+            QUESTION:
+            {question}
+            
+            CONTEXT:
+            
+            CRITICAL: Output the answer directly in the language of the QUESTION. Do NOT introduce your answer (e.g., no "The answer is...").
+        """
         }
     ]
     
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
-    total_tokens = count_tokens(prompt, tokenizer)
-    context_parts = []
+    context_part = []
+    remaining_budget = budget_input - count_tokens(prompt, tokenizer)
+    for i,chunk in enumerate(chunks, start =1):
+        page_number = getattr(chunk, "source_page", "N/A")
+        chunk_text = f"Chunk {i} (Page {page_number}): {chunk.content}\n"
+        chunk_tokens = count_tokens(chunk_text, tokenizer)
 
-    for i, item in enumerate(items, start=1):
-        if hasattr(item, "content"):
-            page = getattr(item, "source_page", "pas un chunk de document")
-            chunk_block = f"Chunk content:\n{item.content} (Page: {page})"
-        elif hasattr(item, "definition"):
-            chunk_block = f"Concept :\n{item.name}: {item.definition}"
-        else:
-            continue
-
-        chunk_tokens = count_tokens(chunk_block, tokenizer)
-
-        if total_tokens + chunk_tokens <= budget_input:
-            context_parts.append(chunk_block)
-            total_tokens += chunk_tokens
+        if chunk_tokens <= remaining_budget:
+            context_part.append(chunk_text)
+            remaining_budget -= chunk_tokens
         else:
             break
+    
+    concept_parts = []
+    for i,concept in enumerate(concepts, start=1):
+        concept_text = f"Concept {i} - {concept.name}: {concept.definition}\n"
+        concept_tokens = count_tokens(concept_text, tokenizer)
 
-    return "\n\n".join(context_parts)
+        if concept_tokens <= remaining_budget:
+            concept_parts.append(concept_text)
+            remaining_budget -= concept_tokens
+        else:
+            break
+    
+    if concept_parts:
+        context_part.append('\nRelevant Concepts:\n')
+        context_part.extend(concept_parts)
+
+    return '\n\n'.join(context_part)
 
 
 def generate_answer(context, question, tokenizer, generation_model, type="qa", max_new_tokens=MAX_OUTPUT, **kwargs):
@@ -183,6 +193,8 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", m
     else:
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
 
+
+
     messages = [
         {
             "role": "system",
@@ -191,14 +203,14 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", m
         {
             "role": "user",
             "content": f"""QUESTION:
-        {question}
+    {question}
 
-        CONTEXT:
-        {context}
+    CONTEXT:
+    {context}
 
-        ANSWER:"""
-        }
-    ]
+    CRITICAL: Output the answer directly in the language of the QUESTION. Do NOT introduce your answer (e.g., no "The answer is...").
+        """
+        }]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     inputs = tokenizer(prompt, return_tensors="pt").to(generation_model.device)
@@ -206,7 +218,7 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", m
     # 1. Initialize the streamer
     streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
     # 2. Run generation in a separate thread because .generate() is blocking
-    generation_kwargs = dict(inputs, streamer=streamer, max_new_tokens=max_new_tokens, do_sample=True)
+    generation_kwargs = dict(inputs, streamer=streamer, max_new_tokens=max_new_tokens, do_sample=False,temperature=0.0,repetition_penalty=1.1)
     thread = Thread(target=generation_model.generate, kwargs=generation_kwargs)
     thread.start()
     # 3. Yield chunks as they arrive

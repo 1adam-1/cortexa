@@ -4,7 +4,7 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=900, min_tokens=50, overlap=1):
+def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=300, min_tokens=50, overlap=1):
 
     chunks=[]
     for section in sections:

@@ -13,20 +13,35 @@ from services.rag.ingestion.load_model import load_generation_model, load_embedd
 from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_unified
 from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
 
+# Path constants
+TESTSET_JSON_PATH = os.path.join(_backend_path, "evaluation", "testset.json")
+PREDICTIONS_OUTPUT_PATH = os.path.join(_backend_path, "evaluation", "predictions.json")
 
 
 
-def generate_predictions(testset_path="../../evaluation/testset.json", output_path="../../evaluation/predictions.json"):
-    embedding_model, reranker_model = load_embedding_models()
-    tokenizer, generation_model = load_generation_model()
+
+def generate_predictions(testset_path=None, output_path=None):
+    """Paths default to backend/evaluation/ (same as dataset_generation.py)."""
+    if testset_path is None:
+        testset_path = TESTSET_JSON_PATH
+    if output_path is None:
+        output_path = PREDICTIONS_OUTPUT_PATH
+
+    testset_path = os.path.abspath(testset_path)
+    output_path = os.path.abspath(output_path)
 
     if not os.path.exists(testset_path):
-        raise ValueError(f"Testset file not found: {testset_path}")
-        return
+        raise FileNotFoundError(
+            f"Testset file not found: {testset_path}\n"
+            "Generate it first: py .\\services\\dataset\\dataset_generation.py"
+        )
     
     with open(testset_path, "r", encoding="utf-8") as f:
         testset = json.load(f)
-    
+
+    embedding_model, reranker_model = load_embedding_models()
+    tokenizer, generation_model = load_generation_model()
+
     predictions = []
 
     for i, sample in enumerate(testset['samples']):
@@ -38,12 +53,14 @@ def generate_predictions(testset_path="../../evaluation/testset.json", output_pa
         final_retrieved = []
         # Utiliser les document_ids qui sont dans le JSON de test
         for doc_id in unique_documents_ids:
-            index_path = f"../../uploads/index_{doc_id}.faiss"
+            index_path = os.path.join(_backend_path, "uploads", f"index_{doc_id}.faiss")
             if not os.path.exists(index_path):
                 continue
             index = faiss.read_index(index_path)
             chunks = Chunk.query.filter_by(id_document=doc_id).all()
-            retrieved_chunks = retrieve_top_chunks(question, index, chunks, embedding_model)
+            retrieved_chunks = retrieve_top_chunks(
+                question, chunks, index, embedding_model
+            )
             final_retrieved.extend(retrieved_chunks)
         
        
@@ -68,6 +85,7 @@ def generate_predictions(testset_path="../../evaluation/testset.json", output_pa
             "contexts": my_contexts
         })
 
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(predictions, f, ensure_ascii=False, indent=2)
     
@@ -76,10 +94,20 @@ def generate_predictions(testset_path="../../evaluation/testset.json", output_pa
 if __name__ == "__main__":
     from dotenv import load_dotenv
     from flask import Flask
-    
+
+    # Same as app.py / dataset_generation.py: DATABASE_URL lives in repo-root .env
+    _dotenv_path = os.path.abspath(os.path.join(_backend_path, "..", ".env"))
+    load_dotenv(dotenv_path=_dotenv_path)
+
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is not set. Define it in the project root .env file "
+            f"(looked for {_dotenv_path}) or set it in your environment."
+        )
+
     app = Flask(__name__)
-    load_dotenv(dotenv_path=os.path.join(_backend_path, ".env"))
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
