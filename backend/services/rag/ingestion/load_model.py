@@ -21,5 +21,9 @@ def load_embedding_models():
         "BAAI/bge-m3",
         device="cpu",
     )
-    reranker = CrossEncoder("BAAI/bge-reranker-base", device="cpu")
-    return embedding_model, reranker
+    nli_model = CrossEncoder(
+        "cross-encoder/nli-deberta-v3-small",
+        device="cpu"
+    )
+    reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device="cpu")
+    return embedding_model, reranker, nli_model

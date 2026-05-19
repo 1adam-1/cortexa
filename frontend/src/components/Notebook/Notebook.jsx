@@ -6,6 +6,24 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog.tsx";
 import { Button } from "../ui/button.tsx";
 
+const OUTPUT_LANGUAGE_OPTIONS = [
+    { value: "auto", label: "Auto (question language)" },
+    { value: "en", label: "English" },
+    { value: "fr", label: "French" },
+    { value: "es", label: "Spanish" },
+    { value: "de", label: "German" },
+    { value: "it", label: "Italian" },
+    { value: "pt", label: "Portuguese" },
+    { value: "ar", label: "Arabic" },
+    { value: "zh", label: "Chinese" },
+    { value: "ja", label: "Japanese" },
+    { value: "ko", label: "Korean" },
+    { value: "ru", label: "Russian" },
+    { value: "tr", label: "Turkish" },
+    { value: "nl", label: "Dutch" },
+    { value: "pl", label: "Polish" }
+];
+
 export default function Notebook() {
     const navigate = useNavigate();
     const [question, setQuestion] = useState("");
@@ -38,11 +56,20 @@ export default function Notebook() {
     const [storedSummaries, setStoredSummaries] = useState([]);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
 
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [outputLanguage, setOutputLanguage] = useState(() => {
+        return localStorage.getItem("output_language") || "auto";
+    });
+
     // Upload specific states
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    useEffect(() => {
+        localStorage.setItem("output_language", outputLanguage);
+    }, [outputLanguage]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -346,9 +373,6 @@ export default function Notebook() {
     };
 
     useEffect(() => {
-        
-
-
         fetchHistory();
         fetchQCM();
         fetchSummaries();
@@ -386,7 +410,8 @@ export default function Notebook() {
                 },
                 body: JSON.stringify({
                     message: question,
-                    session_id: sessionId
+                    session_id: sessionId,
+                    output_language: outputLanguage
                 }),
                 signal: controller.signal
             });
@@ -500,9 +525,46 @@ const handleStop = () => {
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        <button className={classes.iconBtn}>
-                            <Settings size={18} />
-                        </button>
+                        <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
+                            <DialogTrigger asChild>
+                                <button className={classes.iconBtn} title="Settings">
+                                    <Settings size={18} />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
+                                <DialogHeader>
+                                    <DialogTitle className="text-white">Settings</DialogTitle>
+                                </DialogHeader>
+                                <div className={classes.settingsBody}>
+                                    <label className={classes.settingsLabel} htmlFor="outputLanguage">
+                                        Answer language
+                                    </label>
+                                    <select
+                                        id="outputLanguage"
+                                        className={classes.settingsSelect}
+                                        value={outputLanguage}
+                                        onChange={(event) => setOutputLanguage(event.target.value)}
+                                    >
+                                        {OUTPUT_LANGUAGE_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className={classes.settingsNote}>
+                                        Applies to chat replies.
+                                    </p>
+                                </div>
+                                <div className={classes.settingsActions}>
+                                    <Button
+                                        className="w-full bg-white text-black hover:bg-zinc-200 transition-colors font-bold h-12 rounded-xl"
+                                        onClick={() => setShowSettingsModal(false)}
+                                    >
+                                        Done
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
 

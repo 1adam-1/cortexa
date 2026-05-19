@@ -2,7 +2,7 @@ from entities.models import Chunk, Concept
 import faiss
 
 
-def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=40, threshold=0.3):
+def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=20, threshold=0.3):
     k = min(k, len(chunks))
     if k == 0:
         return []

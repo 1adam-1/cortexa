@@ -360,6 +360,26 @@
     gap: 1rem;
 }
 
+.iconBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #09090b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e4e4e7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: #111113;
+    color: #fff;
+}
+
 /* QCM Styles */
 .qcmContainer {
     display: flex;
@@ -647,6 +667,45 @@
 
 .modalBtnGenerate:disabled {
     cursor: wait;
+}
+
+.settingsBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.settingsLabel {
+    font-weight: 600;
+    color: #f4f4f5;
+    font-size: 0.95rem;
+}
+
+.settingsSelect {
+    width: 100%;
+    background: #0f0f11;
+    border: 1px solid #2b2b2f;
+    color: #f4f4f5;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+}
+
+.settingsSelect:focus {
+    outline: none;
+    border-color: #fff;
+    box-shadow: 0 0 0 1px #fff;
+}
+
+.settingsNote {
+    margin: 0;
+    color: #a1a1aa;
+    font-size: 0.85rem;
+}
+
+.settingsActions {
+    margin-top: 0.75rem;
 }
 
 .modalOptionsContainer {

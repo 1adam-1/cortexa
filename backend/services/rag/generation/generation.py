@@ -13,9 +13,14 @@ You are a direct, concise, and professional multilingual RAG assistant.
 
 Rules:
 - Answer ONLY using the provided context. Do not use outside knowledge.
-- Detect the language of the QUESTION and answer STRICTLY in that same language.
-- CRITICAL: DO NOT add conversational filler, meta-commentary, or greetings. Never say "The answer is in French because...", "Voici la réponse", or "Here is the answer". Start directly with your findings.
-- If the context does not contain the answer, reply ONLY with a polite statement saying the information is missing (in the exact language of the QUESTION), and nothing else.
+- The context must DIRECTLY and SPECIFICALLY address the question.
+- If the context only mentions the topic incidentally or as a side reference, 
+  treat it as missing and refuse.
+- If the context does not contain a direct answer, reply ONLY with a polite 
+  statement saying the information is missing. Nothing else.
+- If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
+- Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
+- Use ONLY chunk citations. Do NOT cite concepts.
 - Be concise and objective.
 """
 
@@ -85,8 +90,33 @@ CRITICAL RULES:
 5. Keep the summary well-structured, using bullet points for key takeaways if appropriate.
 """
 
+#no context for answer prompt
+SYSTEM_PROMPT_NO_CONTEXT = """You are a multilingual assistant.
+Your only task is to politely inform the user that the document does not contain 
+information to answer their question.
+Output ONLY that single sentence. Nothing else. No explanation. No apology.
+If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
+"""
+
 import json
 import re
+
+LANGUAGE_CODE_TO_NAME = {
+    "en": "English",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ar": "Arabic",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "ru": "Russian",
+    "tr": "Turkish",
+    "nl": "Dutch",
+    "pl": "Polish",
+}
 
 def extract_json_from_llama_response(text):
     
@@ -102,9 +132,23 @@ def count_tokens(text, tokenizer):
     return len(tokenizer.encode(text, truncation=False))
 
 
-def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET_INPUT, **kwargs):
+def _build_language_directive(target_language_code):
+    if not target_language_code:
+        return ""
 
-    if type == "qa":
+    code = str(target_language_code).strip().lower()
+    if not code or code == "auto":
+        return ""
+
+    language_name = LANGUAGE_CODE_TO_NAME.get(code, "Unknown")
+    return f"TARGET_LANGUAGE: {language_name} ({code})"
+
+
+def build_context(items, tokenizer, question, type ,is_refused=False, budget_input=DEFAULT_BUDGET_INPUT, **kwargs):
+
+    if is_refused:
+        SYSTEM_PROMPT = SYSTEM_PROMPT_NO_CONTEXT
+    elif type == "qa":
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
     elif type == "qcm":
         num_questions = kwargs.get("num_questions", 5)
@@ -125,6 +169,11 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
     chunks = sorted(chunks, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
     concepts = sorted(concepts, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
 
+    language_directive = ""
+    if type == "qa":
+        language_directive = _build_language_directive(kwargs.get("target_language_code"))
+
+    language_block = f"{language_directive}\n\n" if language_directive else ""
     messages = [
         {
             "role": "system",
@@ -136,9 +185,9 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
             QUESTION:
             {question}
             
-            CONTEXT:
+            {language_block}CONTEXT:
             
-            CRITICAL: Output the answer directly in the language of the QUESTION. Do NOT introduce your answer (e.g., no "The answer is...").
+            CRITICAL: Output the answer directly in TARGET_LANGUAGE if provided, otherwise use the QUESTION language. Translate as needed. Do NOT introduce your answer (e.g., no "The answer is...").
         """
         }
     ]
@@ -176,9 +225,11 @@ def build_context(items, tokenizer, question, type , budget_input=DEFAULT_BUDGET
     return '\n\n'.join(context_part)
 
 
-def generate_answer(context, question, tokenizer, generation_model, type="qa", max_new_tokens=MAX_OUTPUT, **kwargs):
+def generate_answer(context, question, tokenizer, generation_model, type="qa", is_refused=False, max_new_tokens=MAX_OUTPUT, **kwargs):
     
-    if type == "qa":
+    if is_refused:
+        SYSTEM_PROMPT = SYSTEM_PROMPT_NO_CONTEXT
+    elif type == "qa":
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
     elif type == "qcm":
         num_questions = kwargs.get("num_questions", 5)
@@ -195,20 +246,29 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", m
 
 
 
+    language_directive = ""
+    if type == "qa":
+        language_directive = _build_language_directive(kwargs.get("target_language_code"))
+
+    system_content = SYSTEM_PROMPT
+    if language_directive:
+        system_content = f"{SYSTEM_PROMPT}\n{language_directive}\nYou MUST answer only in TARGET_LANGUAGE."
+
+    language_block = f"{language_directive}\n\n" if language_directive else ""
     messages = [
         {
             "role": "system",
-            "content": SYSTEM_PROMPT
+            "content": system_content
         },
         {
             "role": "user",
             "content": f"""QUESTION:
     {question}
 
-    CONTEXT:
+    {language_block}CONTEXT:
     {context}
 
-    CRITICAL: Output the answer directly in the language of the QUESTION. Do NOT introduce your answer (e.g., no "The answer is...").
+    CRITICAL: Output the answer directly in TARGET_LANGUAGE if provided, otherwise use the QUESTION language. Translate as needed. Do NOT introduce your answer (e.g., no "The answer is...").
         """
         }]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)

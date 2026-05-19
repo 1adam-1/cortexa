@@ -66,9 +66,8 @@ def generate_predictions(testset_path=None, output_path=None):
        
         documents = Document.query.filter(Document.id.in_(unique_documents_ids)).all()
         session_ids = [d.id_session for d in documents]
-        concepts = Concept.query.join(Cluster).filter(Cluster.id_session.in_(session_ids)).all()
 
-        all_candidates = final_retrieved + concepts
+        all_candidates = final_retrieved 
         reranked_candidates = rerank_unified(question, all_candidates, reranker_model)
         context = build_context(reranked_candidates, tokenizer, question, type="qa")
 
@@ -76,13 +75,13 @@ def generate_predictions(testset_path=None, output_path=None):
         for chunk in generate_answer(context, question, tokenizer, generation_model, type="qa"):
             answer += chunk
         
-        my_contexts = [item.content if hasattr(item, 'content') else item.definition for item in reranked_candidates]
 
+        cleaned_context = context.strip()
         predictions.append({
             "question": question,
             "ground_truth": ground_truth,
             "answer": answer.strip(),
-            "contexts": my_contexts
+            "contexts": [cleaned_context] if cleaned_context else []
         })
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

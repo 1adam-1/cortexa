@@ -140,8 +140,18 @@ class Generation(db.Model):
     rag_context_chunks=db.relationship("Rag_context_chunk", backref="generation", cascade="all, delete-orphan")
     rag_context_concepts=db.relationship("Rag_context_concept", backref="generation", cascade="all, delete-orphan")
     
+class Evaluation(db.Model):
+    __tablename__ = "evaluation"
 
-
+    id=db.Column(db.Integer, primary_key=True)
+    id_generation=db.Column(db.Integer, ForeignKey("generation.id", ondelete='CASCADE'), nullable=False)
+    faithfulness=db.Column(db.Float, nullable=True)
+    entailed=db.Column(db.Integer, nullable=True)
+    total_sentences=db.Column(db.Integer, nullable=True)
+    avg_rerank_score=db.Column(db.Float, nullable=True)
+    evaluation_details=db.Column(db.Text, nullable=True)
+    created_at=db.Column(db.DateTime, default=datetime.utcnow)
+    
 class Rag_context_chunk(db.Model):
     __tablename__ = "rag_context_chunk"
 

@@ -12,6 +12,7 @@ from ragas.metrics import (
 from langchain_ollama import ChatOllama
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
+from entities.models import Evaluation, db
 
 def evaluate_rag_pipeline(predictions_file_path):
     """
@@ -28,6 +29,7 @@ def evaluate_rag_pipeline(predictions_file_path):
 
     with open(predictions_file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
+
 
     # Création du Dataset HuggingFace à partir des données
     df = pd.DataFrame(data)
@@ -68,6 +70,8 @@ def evaluate_rag_pipeline(predictions_file_path):
     )
     
     df_results = result.to_pandas()
+
+    
     
     results_path = predictions_file_path.replace(".json", "_ragas_results.csv")
     df_results.to_csv(results_path, index=False, encoding="utf-8")

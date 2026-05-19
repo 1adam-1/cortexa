@@ -1,4 +1,6 @@
-from flask import json, request, jsonify, Blueprint
+import threading
+
+from flask import json, request, jsonify, Blueprint, current_app
 from services.rag.ingestion.ingestion import save_file, extract_text, create_gemini_client
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
@@ -6,6 +8,7 @@ from services.rag.generation.generation import  generate_answer, build_context, 
 from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_unified
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from services.evaluation.evaluation import evaluate_generation
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
 from services.rag.ingestion.embedding import  save_index
 from entities.models import Chunk, Session, Document, Chat_message, Generation, Cluster, Cluster_chunk, Concept,Rag_context_chunk,Rag_context_concept, db
@@ -19,7 +22,7 @@ pipeline_rag_bp = Blueprint("pipeline_rag", __name__)
 
 #load models
 print("loading models...")
-embedding_model, reranker = load_embedding_models()
+embedding_model, reranker, nli_model = load_embedding_models()
 tokenizer, generation_model = load_generation_model()
 gemini_client = create_gemini_client()
 print("models loaded")
@@ -142,6 +145,7 @@ def user_chat():
     data = request.get_json()
     question = data.get("message")
     session_id = data.get("session_id")
+    output_language = data.get("output_language")
     current_user_id = int(get_jwt_identity())
 
     session_obj = Session.query.get(session_id)
@@ -163,7 +167,18 @@ def user_chat():
     all_candidates = final_retrieved_chunks + concepts
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
-    context = build_context(reranked_items, tokenizer, question, type="qa")
+
+    scores = [getattr(item, "rerank_score", 0.0) for item in reranked_items if hasattr(item, "rerank_score")]
+    is_refused = max(scores) < 0.1 if scores else False
+
+    context = build_context(
+        reranked_items,
+        tokenizer,
+        question,
+        type="qa",
+        is_refused=is_refused,
+        target_language_code=output_language,
+    )
 
     new_chat_msg = Chat_message(
             id_session=session_id,
@@ -183,11 +198,18 @@ def user_chat():
             "rerank_score": getattr(item, "rerank_score", 0.0)
         })
 
-
     def generate():
         full_answer = ""
         try:
-            for chunk in generate_answer(context, question, tokenizer, generation_model, type="qa"):
+            for chunk in generate_answer(
+                context,
+                question,
+                tokenizer,
+                generation_model,
+                is_refused=is_refused,
+                type="qa",
+                target_language_code=output_language,
+            ):
                 full_answer += chunk
                 yield f"data: {chunk}\n\n"
 
@@ -226,6 +248,16 @@ def user_chat():
                         )
                         db.session.add(new_rag_context_concept)
                 db.session.commit()
+            
+                app = current_app._get_current_object()
+
+                def run_eval():
+                    with app.app_context():
+                        evaluate_generation(new_generation.id, full_answer, reranked_items, nli_model)
+
+                thread = threading.Thread(target=run_eval)
+                thread.daemon = True
+                thread.start()
 
             except Exception as e:
                 print(f"Error saving generation on stop: {e}")
