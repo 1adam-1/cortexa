@@ -31,6 +31,35 @@ def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, 
     return top_chunks
 
 
+def retrieve_top_concepts(question, concepts: list[Concept], index, embedding_model, k=10, threshold=0.2):
+    k = min(k, len(concepts))
+    if k == 0:
+        return []
+
+    concept_map = {concept.id: concept for concept in concepts}
+
+    question_embedded = embedding_model.encode(
+        ["Represent this sentence for searching relevant passages: " + question]
+    ).astype("float32")
+    faiss.normalize_L2(question_embedded)
+    scores, indices = index.search(question_embedded, k)
+
+    top_concepts = []
+    for i in range(k):
+        score = float(scores[0][i])
+        idx = int(indices[0][i])
+
+        if score < threshold or idx == -1:
+            continue
+
+        concept = concept_map.get(idx)
+        if concept:
+            concept.faiss_score = score
+            top_concepts.append(concept)
+
+    return top_concepts
+
+
 def rerank_chunks(question, chunks : list[Chunk], reranker, top_n=8):
     if not chunks:
         return []

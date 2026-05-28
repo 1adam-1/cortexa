@@ -67,6 +67,12 @@ export default function Notebook() {
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    //Presentation
+    const [presentationData, setPresentationData] = useState(null);
+    const [isGeneratingPresentation, setIsGeneratingPresentation] = useState(false);
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [activeStudioView, setActiveStudioView] = useState(null);
+
     useEffect(() => {
         localStorage.setItem("output_language", outputLanguage);
     }, [outputLanguage]);
@@ -101,6 +107,7 @@ export default function Notebook() {
 
             const data = await response.json();
             if (data.qcm) {
+                setActiveStudioView("qcm");
                 setQcmData(data.qcm);
                 setUserAnswers({});
                 setShowResults(false);
@@ -146,6 +153,7 @@ export default function Notebook() {
 
             const data = await response.json();
             if (data.question) {
+                setActiveStudioView("practice");
                 setPracticeQuestion(data.question);
                 setPracticeAnswer("");
                 setPracticeEvaluation(null);
@@ -179,6 +187,7 @@ export default function Notebook() {
 
             const data = await response.json();
             if (data.evaluation) {
+                setActiveStudioView("practice");
                 setPracticeEvaluation(data.evaluation);
             }
         } catch (error) {
@@ -326,6 +335,7 @@ export default function Notebook() {
 
             const data = await response.json();
             if (data.summary) {
+                setActiveStudioView("summary");
                 setSummaryData(data.summary);
                 fetchSummaries(); // Refresh the list of summaries
             }
@@ -354,6 +364,46 @@ export default function Notebook() {
             console.error("Failed to fetch stored QCMs:", error);
         }
     };
+
+    //Generate presentation
+    const generatePresentation = async() => {
+        try{
+            setIsGeneratingPresentation(true);
+            const token = localStorage.getItem("access_token");
+            const response = await fetch("http://localhost:5000/api/studio/presentation", {
+                method: "POST",
+                headers:{
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({id_session: sessionId})
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error("Presentation generation failed:", errText);
+                alert("Failed to generate presentation.");
+                return;
+            }
+
+            const data = await response.json();
+            if (data.slides && Array.isArray(data.slides) && data.slides.length > 0) {
+                setActiveStudioView("presentation");
+                setQcmData(null);
+                setPracticeQuestion(null);
+                setPracticeEvaluation(null);
+                setSummaryData(null);
+                setPresentationData(data.slides);
+                setCurrentSlide(0);
+            } else {
+                alert("No slides returned from server.");
+            }
+        } catch(error){
+            console.error("Failed to generate presentation:", error);
+        } finally{
+            setIsGeneratingPresentation(false);
+        }
+
+    } 
 
     //fetch stored summaries
     const fetchSummaries = async () => {
@@ -639,7 +689,7 @@ const handleStop = () => {
                     </div>
                 </div>
                 <div className={classes.studioContent}>
-                    {!qcmData && !practiceQuestion && !summaryData ? (
+                    {!activeStudioView && !qcmData && !practiceQuestion && !summaryData && !presentationData ? (
                         <div className={classes.studioOverview}>
                             <div className={classes.studioEmpty}>
                                 <div className={classes.studioCard} onClick={() => setShowModal(true)}>
@@ -667,6 +717,25 @@ const handleStop = () => {
                                         </>
                                     )}
                                 </div>
+                                <div className={classes.studioCard}
+                                        onClick={isGeneratingPresentation ? undefined : () => {
+                                            setActiveStudioView("presentation");
+                                            generatePresentation();
+                                        }}
+                                        style={{ opacity: isGeneratingPresentation ? 0.7 : 1, cursor: isGeneratingPresentation ? 'auto' : 'pointer' }}
+                                    >
+                                        {isGeneratingPresentation ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span className={classes.spinner} style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }}></span>
+                                                <h3>Generating Presentation...</h3>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h3>Generate Presentation</h3>
+                                                <p>Create a visual slide deck from the key concepts in your documents.</p>
+                                            </>
+                                        )}
+                                    </div>
                             </div>
                             
                             <Dialog open={showSummaryModal} onOpenChange={setShowSummaryModal}>
@@ -734,6 +803,11 @@ const handleStop = () => {
                                                 key={summaryRecord.id || index} 
                                                 className={classes.storedQcmItem}
                                                 onClick={() => {
+                                                    setActiveStudioView("summary");
+                                                    setQcmData(null);
+                                                    setPracticeQuestion(null);
+                                                    setPracticeEvaluation(null);
+                                                    setPresentationData(null);
                                                     setSummaryData(summaryRecord.output); 
                                                 }}
                                             >
@@ -873,7 +947,7 @@ const handleStop = () => {
                                 </button>
                             </div>
                         </div>
-                    ) : summaryData ? (
+                    ) : activeStudioView === "summary" && summaryData ? (
                         <div className={classes.qcmContainer}>
                             <div className={classes.qcmHeader}>
                                 <h3>Document Summary</h3>
@@ -886,13 +960,120 @@ const handleStop = () => {
                             <div className={classes.qcmActions}>
                                 <button 
                                     className={classes.newQcmBtn}
-                                    onClick={() => setSummaryData(null)}
+                                    onClick={() => {
+                                        setSummaryData(null);
+                                        setActiveStudioView(null);
+                                    }}
                                 >
                                     Close Summary
                                 </button>
                             </div>
                         </div>
-                    ) : null}
+                    ) : activeStudioView === "presentation" && isGeneratingPresentation && !presentationData ? (
+                        <div className={classes.qcmContainer}>
+                            <div className={classes.qcmHeader}>
+                                <h3>Generating Presentation</h3>
+                            </div>
+                            <div className={classes.qcmList} style={{ padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                                <span className={classes.largeSpinner} style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#fff' }}></span>
+                                <p style={{ color: '#aaa', margin: 0 }}>Your slides are being generated. This may take a minute.</p>
+                            </div>
+                            <div className={classes.qcmActions}>
+                                <button
+                                    className={classes.newQcmBtn}
+                                    onClick={() => { setActiveStudioView(null); setIsGeneratingPresentation(false); }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : activeStudioView === "presentation" && presentationData ? (
+    <div className={classes.qcmContainer}>
+        <div className={classes.qcmHeader}>
+            <h3>Presentation</h3>
+            <span style={{ color: '#888', fontSize: '0.9rem' }}>
+                {currentSlide + 1} / {presentationData.length}
+            </span>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Slide */}
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                margin: '0 16px',
+                background: '#1a1a2e'
+            }}>
+                {presentationData[currentSlide] && presentationData[currentSlide].image_b64 ? (
+                    <img
+                        src={`data:image/png;base64,${presentationData[currentSlide].image_b64}`}
+                        alt={presentationData[currentSlide]?.title || ''}
+                        style={{ width: '100%', height: '55%', objectFit: 'cover' }}
+                    />
+                ) : (
+                    <div style={{ width: '100%', height: '55%', background: '#2b2b3d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                        No image available
+                    </div>
+                )}
+                <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+                    <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.2rem' }}>
+                        {presentationData[currentSlide]?.title}
+                    </h3>
+                    <p style={{ color: '#ccc', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                        {presentationData[currentSlide]?.summary}
+                    </p>
+                </div>
+            </div>
+
+            {/* Dot navigation */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '16px' }}>
+                {presentationData.map((_, i) => (
+                    <div
+                        key={i}
+                        onClick={() => setCurrentSlide(i)}
+                        style={{
+                            width: i === currentSlide ? '24px' : '8px',
+                            height: '8px',
+                            borderRadius: '4px',
+                            background: i === currentSlide ? '#fff' : '#444',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    />
+                ))}
+            </div>
+        </div>
+
+        <div className={classes.qcmActions}>
+            <button
+                className={classes.modalBtnCancel}
+                onClick={() => setCurrentSlide(p => Math.max(0, p - 1))}
+                disabled={currentSlide === 0}
+            >
+                ← Prev
+            </button>
+            <button
+                className={classes.modalBtnCancel}
+                onClick={() => setCurrentSlide(p => Math.min(presentationData.length - 1, p + 1))}
+                disabled={currentSlide === presentationData.length - 1}
+            >
+                Next →
+            </button>
+            <button
+                className={classes.newQcmBtn}
+                onClick={() => {
+                    setPresentationData(null);
+                    setActiveStudioView(null);
+                }}
+            >
+                Close
+            </button>
+        </div>
+    </div>
+) : null}
                 </div>
             </div>
 
@@ -920,18 +1101,6 @@ const handleStop = () => {
                                         className={`${classes.modalOptionBtn} ${numQuestions === 20 ? classes.modalOptionBtnSelected : ''}`}
                                         onClick={() => setNumQuestions(20)}
                                     >20</button>
-                                </div>
-                                <label className={classes.modalLabel}>Type:</label>
-                                <div className={classes.modalButtonGroup}>
-                                    <button 
-                                        className={`${classes.modalOptionBtn} ${numQuestions === 5 ? classes.modalOptionBtnSelected : ''}`}
-                                        onClick={() => setNumQuestions(5)}
-                                    >QCU</button>
-                                    <button 
-                                        className={`${classes.modalOptionBtn} ${numQuestions === 1 ? classes.modalOptionBtnSelected : ''}`}
-                                       
-                                    >QCM</button>
-                                  
                                 </div>
 
                             </div>

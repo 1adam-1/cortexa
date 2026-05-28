@@ -15,15 +15,6 @@ from ragas.embeddings import LangchainEmbeddingsWrapper
 from entities.models import Evaluation, db
 
 def evaluate_rag_pipeline(predictions_file_path):
-    """
-    Évalue les performances du RAG en utilisant la bibliothèque Ragas.
-    
-    predictions_file_path doit pointer vers un fichier JSON contenant une liste d'objets avec:
-    - "question" (str) : La question posée.
-    - "answer" (str) : La réponse générée par votre RAG.
-    - "contexts" (list[str]) : Les passages récupérés par votre retriever.
-    - "ground_truth" (str) : (Optionnel) La bonne réponse attendue.
-    """
     if not os.path.exists(predictions_file_path):
         raise FileNotFoundError(f"Le fichier {predictions_file_path} n'existe pas.")
 

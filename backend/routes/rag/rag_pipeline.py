@@ -1,16 +1,19 @@
+import base64
 import threading
+import os
 
 from flask import json, request, jsonify, Blueprint, current_app
 from services.rag.ingestion.ingestion import save_file, extract_text, create_gemini_client
 from services.rag.ingestion.chunking import chunk_text_by_tokens
 from services.rag.ingestion.embedding import compute_embeddings, create_faiss_index
 from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
-from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_unified
+from services.rag.retrieval.retrieval import retrieve_top_chunks, retrieve_top_concepts, rerank_unified
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.evaluation.evaluation import evaluate_generation
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
 from services.rag.ingestion.embedding import  save_index
+from services.rag.generation.presentation import generate_presentation
 from entities.models import Chunk, Session, Document, Chat_message, Generation, Cluster, Cluster_chunk, Concept,Rag_context_chunk,Rag_context_concept, db
 import faiss
 from flask import Response, stream_with_context
@@ -26,6 +29,34 @@ embedding_model, reranker, nli_model = load_embedding_models()
 tokenizer, generation_model = load_generation_model()
 gemini_client = create_gemini_client()
 print("models loaded")
+
+
+def retrieve_concepts_for_session(query, session_id, embedding_model, k_per_cluster=5, threshold=0.2):
+    retrieved = []
+    clusters = Cluster.query.filter_by(id_session=session_id).all()
+
+    for cluster in clusters:
+        index_path = f"./uploads/concept_index_{cluster.id}.faiss"
+        if not os.path.exists(index_path):
+            continue
+
+        concepts = Concept.query.filter_by(id_cluster=cluster.id).all()
+        if not concepts:
+            continue
+
+        concept_index = faiss.read_index(index_path)
+        retrieved.extend(
+            retrieve_top_concepts(
+                query,
+                concepts,
+                concept_index,
+                embedding_model,
+                k=k_per_cluster,
+                threshold=threshold,
+            )
+        )
+
+    return retrieved
 
 #upload file
 @pipeline_rag_bp.route("/api/upload", methods=["POST"])
@@ -166,11 +197,12 @@ def user_chat():
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
     all_candidates = final_retrieved_chunks + concepts
 
+
     reranked_items = rerank_unified(question, all_candidates, reranker)
-
-    scores = [getattr(item, "rerank_score", 0.0) for item in reranked_items if hasattr(item, "rerank_score")]
-    is_refused = max(scores) < 0.1 if scores else False
-
+    score=[item.rerank_score for item in reranked_items if hasattr(item, "rerank_score")]
+    max_score = max(score) if score else 0.0
+    is_refused = max_score < 0.2
+    print(f"Max score: {max_score}, Is refused: {is_refused}")
     context = build_context(
         reranked_items,
         tokenizer,
@@ -294,8 +326,8 @@ def generate_qcm():
         retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
         final_retrieved_chunks.extend(retrievd_chunks)
 
-    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = final_retrieved_chunks + concepts
+    retrieved_concepts = retrieve_concepts_for_session(question, session_id, embedding_model)
+    all_candidates = final_retrieved_chunks + retrieved_concepts
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, question, type="qcm", num_questions=num_questions, difficulty=difficulty)
@@ -371,8 +403,7 @@ def generate_practice_question():
         retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
         final_retrieved_chunks.extend(retrievd_chunks)
 
-    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = final_retrieved_chunks + concepts
+    all_candidates = final_retrieved_chunks
 
     reranked_items = rerank_unified(topic, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, topic, type="practice_question")
@@ -446,8 +477,7 @@ def evaluate_practice_answer():
         retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
         final_retrieved_chunks.extend(retrievd_chunks)
 
-    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = final_retrieved_chunks + concepts
+    all_candidates = final_retrieved_chunks
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     
@@ -523,8 +553,8 @@ def generate_summary():
         retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
         final_retrieved_chunks.extend(retrievd_chunks)
     
-    concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
-    all_candidates = final_retrieved_chunks + concepts
+    retrieved_concepts = retrieve_concepts_for_session(topic, session_id, embedding_model)
+    all_candidates = final_retrieved_chunks + retrieved_concepts
     reranked_items = rerank_unified(topic, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, topic, type="summary")
 
@@ -644,5 +674,37 @@ def get_summaries(session_id):
         })
     
     return jsonify({"summaries": summaries}), 200
+
+
+@pipeline_rag_bp.route("/api/studio/presentation", methods=["POST"])
+@jwt_required()
+def generate_presentation_studio():
+    data = request.get_json() or {}
+    id_session = data.get("id_session")
+
+    try:
+        id_session_int = int(id_session)
+    except Exception:
+        return jsonify({"message": "Invalid id_session"}), 400
+
+    current_user_id = int(get_jwt_identity())
+    session_obj = Session.query.get(id_session_int)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
+    document = Document.query.filter_by(id_session=id_session_int).first()
+    if not document:
+        return jsonify({"message": "Document not found for this session"}), 404
+
+    slides = generate_presentation(document.id, generation_model, tokenizer)
+
+    for slide in slides:
+        if "image_bytes" in slide and slide.get("image_bytes"):
+            try:
+                slide["image_b64"] = base64.b64encode(slide.pop("image_bytes")).decode("utf-8")
+            except Exception:
+                slide["image_b64"] = None
+
+    return jsonify({"slides": slides})
 
 

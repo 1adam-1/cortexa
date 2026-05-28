@@ -319,12 +319,11 @@
 
 /* Studio Area Placeholders */
 .studioEmpty {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 2rem;
+    width: 100%;
+    align-content: start;
 }
 
 .studioCard {
@@ -335,6 +334,10 @@
     cursor: pointer;
     text-align: center;
     transition: all 0.2s ease;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .studioCard:hover {
@@ -571,6 +574,15 @@
     width: 16px;
     height: 16px;
     border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+.largeSpinner {
+    width: 64px;
+    height: 64px;
+    border: 4px solid rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     border-top-color: #fff;
     animation: spin 1s ease-in-out infinite;
@@ -817,4 +829,10 @@
     margin: 0;
     color: #a1a1aa;
     font-size: 0.875rem;
+}
+
+@media (max-width: 720px) {
+    .studioEmpty {
+        grid-template-columns: 1fr;
+    }
 }

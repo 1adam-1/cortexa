@@ -20,7 +20,6 @@ Rules:
   statement saying the information is missing. Nothing else.
 - If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
 - Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
-- Use ONLY chunk citations. Do NOT cite concepts.
 - Be concise and objective.
 """
 
@@ -147,8 +146,9 @@ def _build_language_directive(target_language_code):
 def build_context(items, tokenizer, question, type ,is_refused=False, budget_input=DEFAULT_BUDGET_INPUT, **kwargs):
 
     if is_refused:
-        SYSTEM_PROMPT = SYSTEM_PROMPT_NO_CONTEXT
-    elif type == "qa":
+        return ""
+
+    if type == "qa":
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
     elif type == "qcm":
         num_questions = kwargs.get("num_questions", 5)
@@ -229,6 +229,8 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", i
     
     if is_refused:
         SYSTEM_PROMPT = SYSTEM_PROMPT_NO_CONTEXT
+        context = ""
+        question='The document does not contain information to answer the question. Please politely inform the user of this fact in a single sentence.'
     elif type == "qa":
         SYSTEM_PROMPT = SYSTEM_PROMPT_QA
     elif type == "qcm":
