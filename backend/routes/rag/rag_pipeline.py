@@ -202,7 +202,6 @@ def user_chat():
     score=[item.rerank_score for item in reranked_items if hasattr(item, "rerank_score")]
     max_score = max(score) if score else 0.0
     is_refused = max_score < 0.2
-    print(f"Max score: {max_score}, Is refused: {is_refused}")
     context = build_context(
         reranked_items,
         tokenizer,
@@ -280,16 +279,18 @@ def user_chat():
                         )
                         db.session.add(new_rag_context_concept)
                 db.session.commit()
+
+                if not is_refused:
             
-                app = current_app._get_current_object()
+                    app = current_app._get_current_object()
 
-                def run_eval():
-                    with app.app_context():
-                        evaluate_generation(new_generation.id, full_answer, reranked_items, nli_model)
+                    def run_eval():
+                        with app.app_context():
+                            evaluate_generation(new_generation.id, full_answer, reranked_items, nli_model)
 
-                thread = threading.Thread(target=run_eval)
-                thread.daemon = True
-                thread.start()
+                    thread = threading.Thread(target=run_eval)
+                    thread.daemon = True
+                    thread.start()
 
             except Exception as e:
                 print(f"Error saving generation on stop: {e}")
@@ -534,6 +535,8 @@ def evaluate_practice_answer():
 @jwt_required()
 def generate_summary():
     data = request.get_json()
+    output_language = data.get("output_language")
+
     session_id = data.get("session_id")
     topic = data.get("topic", "What are the key concepts and important facts in this document?")
     current_user_id = int(get_jwt_identity())
@@ -556,10 +559,10 @@ def generate_summary():
     retrieved_concepts = retrieve_concepts_for_session(topic, session_id, embedding_model)
     all_candidates = final_retrieved_chunks + retrieved_concepts
     reranked_items = rerank_unified(topic, all_candidates, reranker)
-    context = build_context(reranked_items, tokenizer, topic, type="summary")
+    context = build_context(reranked_items, tokenizer, topic, type="summary", target_language_code=output_language)
 
     summary_raw_output = ""
-    for chunk in generate_answer(context, topic, tokenizer, generation_model, type="summary"):
+    for chunk in generate_answer(context, topic, tokenizer, generation_model, type="summary", target_language_code=output_language):
         summary_raw_output += chunk
     
     if not summary_raw_output.strip():

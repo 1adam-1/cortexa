@@ -12,7 +12,6 @@ from ragas.metrics import (
 from langchain_ollama import ChatOllama
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
-from entities.models import Evaluation, db
 
 def evaluate_rag_pipeline(predictions_file_path):
     if not os.path.exists(predictions_file_path):

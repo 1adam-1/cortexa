@@ -82,11 +82,13 @@ Example of the expected JSON output:
 #Summary prompt
 SYSTEM_PROMPT_SUMMARY = """You are a highly skilled document summarization assistant.
 CRITICAL RULES:
-1. Provide a concise, clear, and comprehensive summary of the provided context.
-2. Highlight the main concepts, findings, and arguments.
-3. Do not invent or hallucinate information. You must rely strictly on the provided context.
-4. Maintain a professional and objective tone.
-5. Keep the summary well-structured, using bullet points for key takeaways if appropriate.
+- Provide a concise, clear, and comprehensive summary of the provided context.
+- Highlight the main concepts, findings, and arguments.
+- Do not invent or hallucinate information. You must rely strictly on the provided context.
+- Maintain a professional and objective tone.
+- Keep the summary well-structured, using bullet points for key takeaways if appropriate.
+- If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
+- Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
 """
 
 #no context for answer prompt
@@ -170,8 +172,9 @@ def build_context(items, tokenizer, question, type ,is_refused=False, budget_inp
     concepts = sorted(concepts, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
 
     language_directive = ""
-    if type == "qa":
-        language_directive = _build_language_directive(kwargs.get("target_language_code"))
+    
+    language_directive = _build_language_directive(kwargs.get("target_language_code"))
+    print(f"Language directive: {language_directive}")
 
     language_block = f"{language_directive}\n\n" if language_directive else ""
     messages = [
@@ -249,8 +252,8 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", i
 
 
     language_directive = ""
-    if type == "qa":
-        language_directive = _build_language_directive(kwargs.get("target_language_code"))
+    
+    language_directive = _build_language_directive(kwargs.get("target_language_code"))
 
     system_content = SYSTEM_PROMPT
     if language_directive:

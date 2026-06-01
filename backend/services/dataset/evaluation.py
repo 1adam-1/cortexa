@@ -39,7 +39,7 @@ def generate_predictions(testset_path=None, output_path=None):
     with open(testset_path, "r", encoding="utf-8") as f:
         testset = json.load(f)
 
-    embedding_model, reranker_model = load_embedding_models()
+    embedding_model, reranker_model, nli_model = load_embedding_models()
     tokenizer, generation_model = load_generation_model()
 
     predictions = []

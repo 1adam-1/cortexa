@@ -2,10 +2,9 @@
   "total":"" ,
   "requested_test_size": "",
   "document_ids": [
-    55,
-    56,
-    67,
-    68
+    75,
+    78,
+    79
   ],
   "samples": [
     {
@@ -111,15 +110,6 @@
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "What are the backend technologies mentioned in this context?",
-      "reference": "The backend technologies mentioned in this context are PHP, JEE, .Net, and Node JS.",
-      "reference_contexts": [
-        "[TABLE]\njava Script Java Script, : Node JS\n▪Le Backend : s’occupe des traitements coté serveur :\n➢Technologies : PHP, JEE, .Net, Node JS\n▪Le Frontend : s’occupe de la présentation coté client :"
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
       "user_input": "How does the Secondary NameNode in Hadoop contribute to high availability and what are the steps involved in recovering a failed NameNode?",
       "reference": "The Secondary NameNode in Hadoop contributes to high availability by replicating metadata from the NameNode, preventing loss of metadata and maintaining recent copies. However, it does not provide immediate high availability as clients cannot read, write, or list files if the NameNode fails due to it being the sole reference for metadata and file-block mapping. To recover a failed NameNode, an administrator starts a new NameNode with one of the metadata copies from the filesystem and configures DataNodes and applications to use this new NameNode.",
       "reference_contexts": [
@@ -169,15 +159,6 @@
       "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
-      "user_input": "What is Angular?",
-      "reference": "Angular is a JavaScript framework presented by Google in 2009, used for creating web and mobile applications.",
-      "reference_contexts": [
-        "Framework JavaScript (ou TypeScript)\n➢Présenté par Google en 2009\n- ➢Permettant de créer des applications web et mobiles :\n- ➢Front-End (l’ensemble des éléments visibles et accessibles directement sur une application web ou une application web mobile)\n- ➢Single page Application (Une SPA est une application qui contient une seule page HTML (index.html) récupérée du serveur)."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "single_hop_specific_query_synthesizer"
-    },
-    {
       "user_input": "How does the Distributed File System manage metadata and ensure data availability across multiple nodes, specifically regarding replication on different racks?",
       "reference": "The Distributed File System manages metadata by having the NameNode store it in memory for quick access, although this requires significant memory. To ensure data availability, the system replicates file blocks across several DataNodes. The number of copies per block is controlled by a replication parameter (default is 3), and replication occurs on different racks to enhance fault tolerance.",
       "reference_contexts": [
@@ -186,15 +167,6 @@
       ],
       "retrieved_contexts": null,
       "synthesizer_name": "multi_hop_abstract_query_synthesizer"
-    },
-    {
-      "user_input": "Can you explain the role of a Model in the MVVM architecture and how it interacts with the View?",
-      "reference": "In the MVVM (Model-View-ViewModel) architecture, the Model represents the data and its business logic. It is typically represented by a class referenced by the data access layer. The View contains the layout and appearance of what a user sees on the screen, receiving interactions with the user such as clicks or keyboard inputs. The ViewModel replaces the controller in the MVC architecture, connecting to the View through data binding, and is represented in Angular by a *.component.ts file. In this context, the Model interacts with the View indirectly through the ViewModel.",
-      "reference_contexts": [
-        "<1-hop>\n\nRespecte l’architecture MVVM (Model-View-ViewModel)\nModel : représenté généralement par une classe référencée par la couche d’accès aux données (classe ou interface TypeScript).\nView: contenant la disposition et l’apparence de ce qu’un utilisateur voit à l’ écran, recevant l’interaction avec l’utilisateur : clic, saisie, survol...\nViewModel: remplaçant du contrôleur dans l’architecture MVC, connecté à la vue par le data binding, représenté dans Angular par un fichier *.component.ts."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_specific_query_synthesizer"
     },
     {
       "user_input": "How does the concept of 'Big Data' address the challenges posed by voluminous data with variety and velocity, as demonstrated during its inception in 2012?",
@@ -222,15 +194,6 @@
       "reference": "Columns with incorrect data types may not allow certain operations. For instance, numeric columns interpreted as categorical ones might cause issues. We might need to convert data types to perform specific operations or treat data correctly.",
       "reference_contexts": [
         "<1-hop>\n\n- • Il peut être nécessaire de convertir les types de données dans un ensemble de données.\n- • Les types de données déterminent les opérations que vous pouvez effectuer sur les colonnes.\n- • Parfois, on doit changer les types de données pour réaliser certaines opérations.\n- • La conversion peut être nécessaire pour traiter correctement les données, notamment lorsque des colonnes numériques doivent être interprétées comme des colonnes catégoriques.\n- • Il faut être attentifs aux types de données lors de l'importation initiale des données et à comprendre les besoins de leur analyse pour décider des conversions nécessaires."
-      ],
-      "retrieved_contexts": null,
-      "synthesizer_name": "multi_hop_specific_query_synthesizer"
-    },
-    {
-      "user_input": "What are the main components of an Angular application and how do they relate to each other?",
-      "reference": "An Angular application is composed of one or more modules, with one being primary. Each module can include web components (visible parts of the application), services for logic, directives used by components, and pipes for data formatting in components.",
-      "reference_contexts": [
-        "<1-hop>\n\nUne application Angular se compose de :\n▪Un à plusieurs modules dont un est principal.\n▪Chaque module peut inclure :\n➢Des composants web : La partie visible de l'application Web (IHM)\n➢Des services pour la logique applicative. Les composants peuvent utiliser les services via le principe de l’injection des dépendances.\n➢Des directives : un composant peut utiliser des directives\n➢Des pipes : utilisés pour formater l’affichage des données dans les composants."
       ],
       "retrieved_contexts": null,
       "synthesizer_name": "multi_hop_specific_query_synthesizer"

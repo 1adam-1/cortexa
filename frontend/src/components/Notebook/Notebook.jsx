@@ -70,7 +70,6 @@ export default function Notebook() {
     //Presentation
     const [presentationData, setPresentationData] = useState(null);
     const [isGeneratingPresentation, setIsGeneratingPresentation] = useState(false);
-    const [currentSlide, setCurrentSlide] = useState(0);
     const [activeStudioView, setActiveStudioView] = useState(null);
 
     useEffect(() => {
@@ -325,7 +324,8 @@ export default function Notebook() {
                 },
                 body: JSON.stringify({
                     session_id: sessionId,
-                    summary_type: type
+                    summary_type: type,
+                    output_language: outputLanguage
                 })
             });
 
@@ -393,7 +393,6 @@ export default function Notebook() {
                 setPracticeEvaluation(null);
                 setSummaryData(null);
                 setPresentationData(data.slides);
-                setCurrentSlide(0);
             } else {
                 alert("No slides returned from server.");
             }
@@ -932,7 +931,7 @@ const handleStop = () => {
                                 ) : (
                                     <button 
                                         className={classes.checkAnswersBtn}
-                                        onClick={generatePracticeQuestion}
+                                        onClick={() => setShowPracticeModal(true)}
                                         disabled={isGeneratingPractice}
                                     >
                                         {isGeneratingPractice ? "Generating..." : "Next Question"}
@@ -992,76 +991,48 @@ const handleStop = () => {
         <div className={classes.qcmHeader}>
             <h3>Presentation</h3>
             <span style={{ color: '#888', fontSize: '0.9rem' }}>
-                {currentSlide + 1} / {presentationData.length}
+                {presentationData.length} slides
             </span>
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* Slide */}
-            <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                margin: '0 16px',
-                background: '#1a1a2e'
-            }}>
-                {presentationData[currentSlide] && presentationData[currentSlide].image_b64 ? (
-                    <img
-                        src={`data:image/png;base64,${presentationData[currentSlide].image_b64}`}
-                        alt={presentationData[currentSlide]?.title || ''}
-                        style={{ width: '100%', height: '55%', objectFit: 'cover' }}
-                    />
-                ) : (
-                    <div style={{ width: '100%', height: '55%', background: '#2b2b3d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-                        No image available
-                    </div>
-                )}
-                <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
-                    <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.2rem' }}>
-                        {presentationData[currentSlide]?.title}
-                    </h3>
-                    <p style={{ color: '#ccc', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                        {presentationData[currentSlide]?.summary}
-                    </p>
-                </div>
-            </div>
-
-            {/* Dot navigation */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '16px' }}>
-                {presentationData.map((_, i) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', padding: '0 16px 16px' }}>
+                {presentationData.map((slide, index) => (
                     <div
-                        key={i}
-                        onClick={() => setCurrentSlide(i)}
+                        key={index}
                         style={{
-                            width: i === currentSlide ? '24px' : '8px',
-                            height: '8px',
-                            borderRadius: '4px',
-                            background: i === currentSlide ? '#fff' : '#444',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            display: 'flex',
+                            flexDirection: 'column',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            background: '#1a1a2e'
                         }}
-                    />
+                    >
+                        {slide && slide.image_b64 ? (
+                            <img
+                                src={`data:image/png;base64,${slide.image_b64}`}
+                                alt={slide?.title || ''}
+                                style={{ width: '100%', height: '55%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div style={{ width: '100%', height: '55%', background: '#2b2b3d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                                No image available
+                            </div>
+                        )}
+                        <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+                            <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.2rem' }}>
+                                {index + 1}. {slide?.title}
+                            </h3>
+                            <p style={{ color: '#ccc', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                                {slide?.summary}
+                            </p>
+                        </div>
+                    </div>
                 ))}
             </div>
         </div>
 
         <div className={classes.qcmActions}>
-            <button
-                className={classes.modalBtnCancel}
-                onClick={() => setCurrentSlide(p => Math.max(0, p - 1))}
-                disabled={currentSlide === 0}
-            >
-                ← Prev
-            </button>
-            <button
-                className={classes.modalBtnCancel}
-                onClick={() => setCurrentSlide(p => Math.min(presentationData.length - 1, p + 1))}
-                disabled={currentSlide === presentationData.length - 1}
-            >
-                Next →
-            </button>
             <button
                 className={classes.newQcmBtn}
                 onClick={() => {
