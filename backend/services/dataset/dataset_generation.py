@@ -117,10 +117,9 @@ def generate_testset(
             current_batch = min(remaining_size, batch_size)
             logging.info("Generating batch of %d samples (remaining: %d)...", current_batch, remaining_size)
             try:
-                testset = generator.generate_with_chunks(
-                    chunks=docs,
+                testset = generator.generate_with_langchain_docs(
+                    documents=docs,
                     testset_size=current_batch,
-                    raise_exceptions=False,
                 )
                 
                 rows = testset.to_list() if testset is not None else []
@@ -165,7 +164,7 @@ def _parse_doc_ids_env(raw: str | None) -> list[int] | None:
 
 
 # Used when RAGAS_DOC_IDS is not set. Override per machine or use env: RAGAS_DOC_IDS=55,56,57
-DEFAULT_RAGAS_DOCUMENT_IDS: list[int] = [55, 56, 67, 68]
+DEFAULT_RAGAS_DOCUMENT_IDS: list[int] = [80, 81, 82, 83, 84, 85]  
 
 
 if __name__ == "__main__":
@@ -206,7 +205,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
         try:
-            result = generate_testset(document_ids=doc_ids, test_size=45)
+            result = generate_testset(document_ids=doc_ids, test_size=100)
             print(
                 f"Done. Used document id(s): {doc_ids}. "
                 f"Generated {result['total']}/{result['requested_test_size']} sample(s)."

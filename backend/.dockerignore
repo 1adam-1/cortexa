@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+.venv1/
+venv/
+env/
+ENV/
+
+# Local configuration and secrets
+.env
+.env.*
+
+# Git and editor files
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build and generated artifacts
+build/
+dist/
+*.egg-info/
+*.faiss
+*.pkl
+
+# Runtime/user data
+uploads/
+evaluation/*.csv
+evaluation/*.json

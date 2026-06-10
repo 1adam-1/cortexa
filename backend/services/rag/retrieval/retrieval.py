@@ -2,14 +2,14 @@ from entities.models import Chunk, Concept
 import faiss
 
 
-def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=20, threshold=0.3):
+def retrieve_top_chunks(question, chunks : list[Chunk], index, embedding_model, k=20, threshold=0.2):
     k = min(k, len(chunks))
     if k == 0:
         return []
 
     chunk_map = {chunk.id: chunk for chunk in chunks}
 
-    question_embedded = embedding_model.encode(["Represent this sentence for searching relevant passages: " + question]).astype("float32")
+    question_embedded = embedding_model.encode(["query: " + question]).astype("float32")
     faiss.normalize_L2(question_embedded)
     scores, indices = index.search(question_embedded, k)
 
@@ -38,9 +38,7 @@ def retrieve_top_concepts(question, concepts: list[Concept], index, embedding_mo
 
     concept_map = {concept.id: concept for concept in concepts}
 
-    question_embedded = embedding_model.encode(
-        ["Represent this sentence for searching relevant passages: " + question]
-    ).astype("float32")
+    question_embedded = embedding_model.encode(["query: " + question]).astype("float32")
     faiss.normalize_L2(question_embedded)
     scores, indices = index.search(question_embedded, k)
 
@@ -60,7 +58,7 @@ def retrieve_top_concepts(question, concepts: list[Concept], index, embedding_mo
     return top_concepts
 
 
-def rerank_chunks(question, chunks : list[Chunk], reranker, top_n=8):
+def rerank_chunks(question, chunks: list[Chunk], reranker, top_n=10):
     if not chunks:
         return []
 
@@ -73,7 +71,7 @@ def rerank_chunks(question, chunks : list[Chunk], reranker, top_n=8):
     chunks = sorted(chunks, key=lambda x: getattr(x, 'rerank_score', 0), reverse=True)
     return chunks[:top_n]
 
-def rerank_unified(question, items, reranker, top_n=8):
+def rerank_unified(question, items, reranker, top_n=10):
     if not items:
         return []
 

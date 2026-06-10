@@ -102,7 +102,7 @@ Respond ONLY with valid JSON. No explanation, no markdown."""
 
 
 def compute_concept_embeddings(concepts, embedding_model):
-    text = [concept.get("definition", "") for concept in concepts]
+    text = ["passage: " + concept.get("definition", "") for concept in concepts]
     embeddings = embedding_model.encode(text)
     return np.array(embeddings).astype("float32")
 

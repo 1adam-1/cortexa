@@ -7,21 +7,25 @@ _backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 if _backend_path not in sys.path:
     sys.path.insert(0, _backend_path)
 
-from entities.models import Document, Concept, Chunk, Cluster, db
+from entities.models import Document, Chunk, db
 import faiss
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
 from services.rag.retrieval.retrieval import retrieve_top_chunks, rerank_unified
-from services.rag.generation.generation import  generate_answer, build_context, extract_json_from_llama_response
+from services.rag.generation.generation import generate_answer, build_context
 
 # Path constants
 TESTSET_JSON_PATH = os.path.join(_backend_path, "evaluation", "testset.json")
 PREDICTIONS_OUTPUT_PATH = os.path.join(_backend_path, "evaluation", "predictions.json")
 
 
-
-
 def generate_predictions(testset_path=None, output_path=None):
-    """Paths default to backend/evaluation/ (same as dataset_generation.py)."""
+    """
+    Runs the RAG pipeline on every sample in the testset and saves:
+      - retrieved_contexts : list of individual chunk/concept strings (for RAGAS)
+      - response           : generated answer (for RAGAS)
+    The output format matches what RAGAS expects:
+      user_input, reference, reference_contexts, retrieved_contexts, response
+    """
     if testset_path is None:
         testset_path = TESTSET_JSON_PATH
     if output_path is None:
@@ -35,66 +39,106 @@ def generate_predictions(testset_path=None, output_path=None):
             f"Testset file not found: {testset_path}\n"
             "Generate it first: py .\\services\\dataset\\dataset_generation.py"
         )
-    
+
     with open(testset_path, "r", encoding="utf-8") as f:
         testset = json.load(f)
 
     embedding_model, reranker_model, nli_model = load_embedding_models()
     tokenizer, generation_model = load_generation_model()
 
+    unique_documents_ids = testset.get("document_ids", [])
+
+    # Pre-load FAISS indexes and chunks once (avoid reloading per sample)
+    print("Loading FAISS indexes...")
+    index_map: dict[int, tuple] = {}  # doc_id -> (faiss_index, chunks_list)
+    for doc_id in unique_documents_ids:
+        index_path = os.path.join(_backend_path, "uploads", f"index_{doc_id}.faiss")
+        if not os.path.exists(index_path):
+            print(f"  [WARN] No FAISS index found for doc_id={doc_id}, skipping.")
+            continue
+        index = faiss.read_index(index_path)
+        chunks = Chunk.query.filter_by(id_document=doc_id).all()
+        index_map[doc_id] = (index, chunks)
+        print(f"  Loaded doc_id={doc_id}: {len(chunks)} chunks")
+
     predictions = []
+    total = len(testset["samples"])
 
-    for i, sample in enumerate(testset['samples']):
-        question=sample['user_input']
-        ground_truth=sample['reference']
+    for i, sample in enumerate(testset["samples"]):
+        question = sample["user_input"]
+        ground_truth = sample["reference"]
 
-        unique_documents_ids = testset.get("document_ids", [])
+        print(f"\n[{i+1}/{total}] Processing: {question[:80]}...")
 
-        final_retrieved = []
-        # Utiliser les document_ids qui sont dans le JSON de test
-        for doc_id in unique_documents_ids:
-            index_path = os.path.join(_backend_path, "uploads", f"index_{doc_id}.faiss")
-            if not os.path.exists(index_path):
-                continue
-            index = faiss.read_index(index_path)
-            chunks = Chunk.query.filter_by(id_document=doc_id).all()
-            retrieved_chunks = retrieve_top_chunks(
-                question, chunks, index, embedding_model
+        # ── 1. Retrieve ──────────────────────────────────────────────────────────
+        all_candidates = []
+        for doc_id, (index, chunks) in index_map.items():
+            retrieved = retrieve_top_chunks(
+                question, chunks, index, embedding_model,
             )
-            final_retrieved.extend(retrieved_chunks)
-        
-       
-        documents = Document.query.filter(Document.id.in_(unique_documents_ids)).all()
-        session_ids = [d.id_session for d in documents]
+            all_candidates.extend(retrieved)
 
-        all_candidates = final_retrieved 
+        # ── 2. Rerank ────────────────────────────────────────────────────────────
         reranked_candidates = rerank_unified(question, all_candidates, reranker_model)
+
+        # ── 3. Extract individual chunk texts for RAGAS ──────────────────────────
+        # IMPORTANT: must be individual strings, NOT one concatenated block.
+        retrieved_texts = []
+        for item in reranked_candidates:
+            if hasattr(item, "content") and item.content:
+                retrieved_texts.append(item.content)
+            elif hasattr(item, "definition") and item.definition:
+                retrieved_texts.append(f"{item.name}: {item.definition}")
+
+        # ── 4. Build prompt context and generate answer ──────────────────────────
         context = build_context(reranked_candidates, tokenizer, question, type="qa")
 
         answer = ""
-        for chunk in generate_answer(context, question, tokenizer, generation_model, type="qa"):
+        for chunk in generate_answer(
+            context, question, tokenizer, generation_model, type="qa", target_language_code="en"
+        ):
             answer += chunk
-        
 
-        cleaned_context = context.strip()
-        predictions.append({
-            "question": question,
-            "ground_truth": ground_truth,
-            "answer": answer.strip(),
-            "contexts": [cleaned_context] if cleaned_context else []
-        })
+        answer = answer.strip()
+        print(f"  Retrieved {len(retrieved_texts)} chunks → answer: {answer[:100]}...")
 
+        # ── 5. Store in RAGAS-compatible format ──────────────────────────────────
+        predictions.append(
+            {
+                "user_input": question,
+                "reference": ground_truth,
+                "reference_contexts": sample.get("reference_contexts") or [],
+                "retrieved_contexts": retrieved_texts,
+                "response": answer,
+            }
+        )
+
+        # Save incrementally so partial progress is not lost
+        _save(predictions, output_path, testset)
+
+    print(f"\n✅ Done! {len(predictions)}/{total} predictions saved → {output_path}")
+    return predictions
+
+
+def _save(predictions: list, output_path: str, testset: dict) -> None:
+    """Persist current predictions to disk (called after every sample)."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    result = {
+        "total": len(predictions),
+        "requested_test_size": testset.get("requested_test_size", len(predictions)),
+        "document_ids": testset.get("document_ids", []),
+        "samples": predictions,
+    }
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(predictions, f, ensure_ascii=False, indent=2)
-    
-    print(f"\n✅ Terminé ! Prédictions sauvegardées dans {output_path}")
+        json.dump(result, f, ensure_ascii=False, indent=2)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     from flask import Flask
 
-    # Same as app.py / dataset_generation.py: DATABASE_URL lives in repo-root .env
     _dotenv_path = os.path.abspath(os.path.join(_backend_path, "..", ".env"))
     load_dotenv(dotenv_path=_dotenv_path)
 
@@ -112,6 +156,3 @@ if __name__ == "__main__":
 
     with app.app_context():
         generate_predictions()
-        
-
-    

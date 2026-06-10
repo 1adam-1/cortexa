@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 import pandas as pd
 from datasets import Dataset
 from ragas import evaluate
@@ -12,45 +13,124 @@ from ragas.metrics import (
 from langchain_ollama import ChatOllama
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
+from langchain_huggingface import HuggingFaceEmbeddings
+from ragas.run_config import RunConfig
+from dotenv import load_dotenv
 
-def evaluate_rag_pipeline(predictions_file_path):
+
+def evaluate_rag_pipeline(predictions_file_path: str | None = None) -> object:
+    """
+    Évalue le pipeline RAG avec RAGAS.
+
+    Format attendu dans predictions.json :
+    {
+      "samples": [
+        {
+          "user_input": "...",
+          "reference": "...",
+          "reference_contexts": ["...", "..."],
+          "retrieved_contexts": ["...", "..."],
+          "response": "..."
+        },
+        ...
+      ]
+    }
+    """
+
+    # ── Chemins ──────────────────────────────────────────────────────────────
+    if predictions_file_path is None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        predictions_file_path = os.path.abspath(
+            os.path.join(current_dir, "../../evaluation/predictions.json")
+        )
+
     if not os.path.exists(predictions_file_path):
-        raise FileNotFoundError(f"Le fichier {predictions_file_path} n'existe pas.")
+        raise FileNotFoundError(
+            f"Fichier introuvable : {predictions_file_path}\n"
+            "Lance d'abord generate_predictions.py"
+        )
 
+    # ── Chargement des données ────────────────────────────────────────────────
     with open(predictions_file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+        raw = json.load(f)
 
+    # Le JSON peut être {"samples": [...]} ou directement [...]
+    samples = raw["samples"] if isinstance(raw, dict) and "samples" in raw else raw
 
-    # Création du Dataset HuggingFace à partir des données
-    df = pd.DataFrame(data)
-    dataset = Dataset.from_pandas(df)
+    if not samples:
+        raise ValueError("Aucun sample trouvé dans le fichier de prédictions.")
 
-    # Définition des métriques à calculer
-    metrics = [
-        faithfulness,       # Fait-il des hallucinations par rapport au contexte?
-        answer_relevancy,   # La réponse est-elle pertinente par rapport à la question?
-        context_precision,  # Les contextes récupérés sont-ils vraiment pertinents?
-        context_recall,     # Le contexte contient-il toutes les infos pour la réponse?
-    ]
+    # ── Validation et nettoyage des samples ───────────────────────────────────
+    required_fields = {"user_input", "reference", "reference_contexts", "retrieved_contexts", "response"}
+    clean_samples = []
+    skipped = 0
 
-    print("Début de l'évaluation Ragas... (Cela peut prendre un certain temps)")
-    
-    # Configuration du LLM Ollama pour l'évaluation locale
-    ollama_llm = ChatOllama(model="mistral-nemo", format="json", temperature=0.0) 
+    for i, s in enumerate(samples):
+        missing = required_fields - set(s.keys())
+        if missing:
+            print(f"  [WARN] Sample {i} ignoré — champs manquants : {missing}")
+            skipped += 1
+            continue
+
+        if not s.get("retrieved_contexts"):
+            print(f"  [WARN] Sample {i} ignoré — retrieved_contexts vide")
+            skipped += 1
+            continue
+
+        if not s.get("reference_contexts"):
+            print(f"  [WARN] Sample {i} ignoré — reference_contexts vide")
+            skipped += 1
+            continue
+
+        clean_samples.append({
+            "user_input":         s["user_input"],
+            "reference":          s["reference"],
+            "reference_contexts": s["reference_contexts"],
+            "retrieved_contexts": s["retrieved_contexts"],
+            "response":           s["response"],
+        })
+
+    print(f"Samples valides : {len(clean_samples)} / {len(samples)} ({skipped} ignorés)")
+
+    if not clean_samples:
+        raise ValueError("Aucun sample valide après nettoyage. Vérifie ton predictions.json.")
+
+    dataset = Dataset.from_list(clean_samples)
+
+    # ── LLM : Ollama mistral-nemo local ──────────────────────────────────────
+    ollama_llm = ChatOllama(
+        model="mistral-nemo",
+        format="json",
+        temperature=0.0,
+    )
     ragas_llm = LangchainLLMWrapper(ollama_llm)
-    
-    # Configuration du modèle d'embedding HuggingFace identique à dataset_generation.py
-    from langchain_huggingface import HuggingFaceEmbeddings
+
+    # ── Embeddings : BGE-M3 ───────────────────────────────────────────────────
+    print("Chargement du modèle d'embedding BGE-M3...")
     hf_emb = HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3",
         model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
     )
     ragas_embeddings = LangchainEmbeddingsWrapper(hf_emb)
-    
-    # Configuration pour Ragas (désactiver la parallélisation et augmenter le timeout)
-    from ragas.run_config import RunConfig
-    run_config = RunConfig(timeout=180, max_workers=1)
-    
+
+    # ── Métriques RAGAS ───────────────────────────────────────────────────────
+    metrics = [
+        faithfulness,       # Hallucinations par rapport au contexte récupéré ?
+        answer_relevancy,   # La réponse est-elle pertinente à la question ?
+        context_precision,  # Les chunks récupérés sont-ils vraiment utiles ?
+        context_recall,     # Le contexte couvre-t-il la réponse de référence ?
+    ]
+
+    # ── Évaluation ────────────────────────────────────────────────────────────
+    run_config = RunConfig(
+        timeout=180,
+        max_workers=1,  # Obligatoire avec Ollama local pour éviter la saturation RAM
+    )
+
+    print(f"\nDébut évaluation RAGAS sur {len(clean_samples)} samples...")
+    print("Attention : avec Ollama local, cette étape peut prendre plusieurs heures.\n")
+
     result = evaluate(
         dataset=dataset,
         metrics=metrics,
@@ -58,21 +138,31 @@ def evaluate_rag_pipeline(predictions_file_path):
         embeddings=ragas_embeddings,
         run_config=run_config,
     )
-    
+
+    # ── Sauvegarde des résultats ──────────────────────────────────────────────
     df_results = result.to_pandas()
 
-    
-    
     results_path = predictions_file_path.replace(".json", "_ragas_results.csv")
     df_results.to_csv(results_path, index=False, encoding="utf-8")
-    print(f"Évaluation terminée ! Résultats sauvegardés dans : {results_path}")
-    
+
+    # Résumé dans le terminal
+    print("\n" + "=" * 50)
+    print("RÉSULTATS RAGAS")
+    print("=" * 50)
+    for metric in metrics:
+        score = df_results[metric.name].mean()
+        print(f"  {metric.name:<25} : {score:.4f}")
+    print("=" * 50)
+    print(f"\nRésultats détaillés sauvegardés : {results_path}")
+
     return result
 
-# Exemple d'exécution
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
-    # Chemin absolu pour éviter les problèmes de dossier de travail (cwd)
-    current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend/services/dataset
-    predictions_path = os.path.join(current_dir, "../../evaluation/predictions.json")
-    
-    evaluate_rag_pipeline(predictions_path)
+    _backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    _dotenv_path = os.path.abspath(os.path.join(_backend_path, "..", ".env"))
+    load_dotenv(dotenv_path=_dotenv_path)
+
+    evaluate_rag_pipeline()
