@@ -21,6 +21,7 @@ Rules:
 - If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
 - Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
 - Be concise and objective.
+- Mention the source page number(s) in the context that support your answer, if it is available, in the format (Page X).
 """
 
 # QCM prompt

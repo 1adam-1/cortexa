@@ -1,0 +1,453 @@
+/* ── Shell & Card ─────────────────────────────────────── */
+
+.shell {
+  min-height: 100vh;
+  background-color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.card {
+  display: flex;
+  width: 100%;
+  max-width: 880px;
+  background-color: #ffffff;
+  border: 1px solid #e5e0da;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Sidebar ──────────────────────────────────────────── */
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background-color: #faf8f5;
+  border-right: 1px solid #e5e0da;
+  padding: 2.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatarRing {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b7b68, #b8a895);
+  margin-bottom: 0.5rem;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: #f8f7f4;
+  color: #8b7b68;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #faf8f5;
+  transition: transform 0.2s ease;
+}
+
+.avatarRing:hover .avatar {
+  transform: scale(1.05);
+}
+
+.fullName {
+  color: #2c2520;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+}
+
+.userId {
+  color: #9b8f7f;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.metaBlock {
+  width: 100%;
+  margin: 0.75rem 0;
+  padding: 0.875rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid #e5e0da;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.metaLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9b8f7f;
+}
+
+.metaValue {
+  font-size: 0.8rem;
+  color: #6b5f52;
+  word-break: break-all;
+}
+
+/* ── Main Content ─────────────────────────────────────── */
+
+.content {
+  flex: 1;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2c2520;
+  margin: 0;
+}
+
+.editingBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b7b68;
+  background-color: rgba(139, 123, 104, 0.08);
+  border: 1px solid rgba(139, 123, 104, 0.2);
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+}
+
+/* ── Fields Grid ──────────────────────────────────────── */
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #9b8f7f;
+}
+
+.fieldValue {
+  font-size: 0.925rem;
+  color: #3d3530;
+  margin: 0;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid #e5e0da;
+}
+
+.empty {
+  color: #bfb0a0;
+}
+
+.fieldInput {
+  background-color: #faf8f5;
+  border: 1px solid #e5e0da;
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9rem;
+  color: #2c2520;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+}
+
+.fieldInput:focus {
+  border-color: #8b7b68;
+  box-shadow: 0 0 0 3px rgba(139, 123, 104, 0.08);
+}
+
+.fieldInput::placeholder {
+  color: #bfb0a0;
+}
+
+/* ── Actions ──────────────────────────────────────────– */
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* ── Buttons ──────────────────────────────────────────– */
+
+.btnPrimary {
+  background-color: #8b7b68;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background-color: #6b5f52;
+}
+
+.btnPrimary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Override width when inside .actions (not sidebar) */
+.actions .btnPrimary {
+  width: auto;
+}
+
+.btnGhost {
+  background: transparent;
+  color: #6b5f52;
+  border: 1px solid #e5e0da;
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.btnGhost:hover {
+  border-color: #8b7b68;
+  color: #2c2520;
+}
+
+/* ── Danger Zone ──────────────────────────────────────– */
+
+.dangerZone {
+  margin-top: auto;
+  border: 1px solid rgba(220, 87, 87, 0.15);
+  border-radius: 10px;
+  padding: 1.25rem 1.25rem 1.25rem;
+  background-color: rgba(220, 87, 87, 0.03);
+}
+
+.dangerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dangerLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c85757;
+  white-space: nowrap;
+}
+
+.dangerRule {
+  flex: 1;
+  height: 1px;
+  background-color: rgba(220, 87, 87, 0.15);
+}
+
+.dangerBody {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.dangerTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2c2520;
+  margin: 0 0 0.25rem;
+}
+
+.dangerDesc {
+  font-size: 0.8rem;
+  color: #9b8f7f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btnDanger {
+  background: transparent;
+  color: #c85757;
+  border: 1px solid #c85757;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.btnDanger:hover {
+  background-color: #c85757;
+  color: #fff;
+}
+
+.btnDangerConfirm {
+  background-color: #c85757;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.btnDangerConfirm:hover {
+  background-color: #b54545;
+}
+
+.confirmRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.confirmText {
+  font-size: 0.8rem;
+  color: #c85757;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Toast / Feedback ─────────────────────────────────– */
+
+.toast {
+  padding: 0.75rem 1rem;
+  background-color: rgba(139, 123, 104, 0.08);
+  border: 1px solid rgba(139, 123, 104, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #8b7b68;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+.toastError {
+  padding: 0.75rem 1rem;
+  background-color: rgba(220, 87, 87, 0.06);
+  border: 1px solid rgba(220, 87, 87, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #c85757;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Loading / Error States ───────────────────────────– */
+
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #9b8f7f;
+  font-size: 0.9rem;
+}
+
+.errorIcon {
+  font-size: 2rem;
+  color: #c85757;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e0da;
+  border-top-color: #8b7b68;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Animations ───────────────────────────────────────– */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ───────────────────────────────────────– */
+
+@media (max-width: 680px) {
+  .card {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e5e0da;
+    padding: 2rem 1.5rem 1.5rem;
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+
+  .dangerBody {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

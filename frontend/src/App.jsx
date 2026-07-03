@@ -5,6 +5,7 @@ import Notebooks from "./components/notebooks/Notebooks.jsx";
 import Notebook from "./components/Notebook/Notebook.jsx";
 import Auth from "./components/auth/Auth.jsx";
 import EvaluationPage from "./components/evaluation/EvaluationPage.jsx";
+import Profile from "./components/profile/Profile.jsx";
 
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 
@@ -43,6 +44,15 @@ function App() {
         <Route path="/auth" element={<Auth />} />
         {/* Redirect root to auth by default */}
         <Route path="/" element={<Navigate to="/auth" replace />} />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </>
   )

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from routes.auth import auth_bp
 from routes.evaluation import evaluation_bp
 from routes.rag.rag_pipeline import pipeline_rag_bp
+from routes.profile.profile import profile_bp
 from flask_jwt_extended import JWTManager
 
 load_dotenv(dotenv_path='../.env')
@@ -16,6 +17,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(pipeline_rag_bp)
 app.register_blueprint(evaluation_bp)
+app.register_blueprint(profile_bp)
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 jwt = JWTManager(app)

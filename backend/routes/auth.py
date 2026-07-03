@@ -2,7 +2,7 @@ from flask import request, jsonify, Blueprint
 from services.auth.auth_service import register_student, login_student
 from services.sessions.sessions import get_sessions, delete_session
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from entities.models import Session
+from entities.models import Session, Document
 
 auth_bp = Blueprint('auth', __name__)
 

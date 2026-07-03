@@ -242,6 +242,7 @@ export default function Notebooks() {
                             </div>
                             
                             <h3 className="text-xl font-bold text-white mb-2">Notebook #{session.id}</h3>
+                            <h5 className="text-sm font-bold text-white mb-2">{session.documents?.[0]?.title}</h5>
                             <p className="text-zinc-400 text-sm mb-auto">
                                 Created on {new Date(session.date_debut).toLocaleDateString(undefined, {
                                     year: 'numeric',

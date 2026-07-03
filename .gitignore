@@ -48,3 +48,6 @@ Thumbs.db
 
 #frontend
 ./frontend/node_modules
+
+#backend
+.\backend\uploads

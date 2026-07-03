@@ -30,11 +30,11 @@ export function Navbar() {
                     </Link>
 
                     <Link
-                        to="/auth"
+                        to="/profile"
                         className={styles.iconBtn}
                         aria-label="Profile"
                     >
-                        <CircleUserRound size={20} />
+                        <CircleUserRound size={20} /> Profile
                     </Link>
 
                     <Link
@@ -42,7 +42,7 @@ export function Navbar() {
                         aria-label="Logout"
                         onClick={handleLogout}
                     >
-                        <LogOut size={20} />
+                        <LogOut size={20} /> Logout
                     </Link>
                 </div>
 
