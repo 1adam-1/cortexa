@@ -1,6 +1,6 @@
 # Cortexa 🧠
 
-**An AI-powered study companion.** Upload your course materials, then chat with them, generate quizzes, summaries, practice sessions and slide decks  all backed by a local Retrieval-Augmented Generation (RAG) pipeline with built-in answer-quality evaluation.
+**An AI-powered study companion.** Upload your course materials, then chat with them, generate quizzes, summaries, practice sessions and slide decks  all backed by a local Retrieval Augmented Generation (RAG) pipeline with built-in answer quality evaluation.
 
 
 ---
@@ -104,7 +104,7 @@ docker compose up --build
 
 This starts the frontend on **http://localhost:3000**, the API on **http://localhost:5000**, and PostgreSQL on port 5432. The backend container requires the NVIDIA Container Toolkit for GPU access.
 
-> 💡 The compose file mounts a local Hugging Face cache into the backend container to avoid re-downloading models — adjust the volume path in `docker-compose.yml` to match your machine.
+> 💡 The compose file mounts a local Hugging Face cache into the backend container to avoid re-downloading models adjust the volume path in `docker-compose.yml` to match your machine.
 
 ## 🔌 API overview
 
@@ -126,7 +126,7 @@ All routes except signup/login require a `Bearer` JWT.
 
 ## 📈 Evaluation
 
-Cortexa doesn't just answer — it checks itself:
+Cortexa doesn't just answer it checks itself:
 
 - **Online:** after each chat answer, a background thread splits the answer into sentences and verifies each one is entailed by the retrieved context (NLI cross-encoder). The faithfulness score, entailment details and rerank scores are stored per generation.
 - **Offline:** `backend/evaluation/` contains a test set and RAGAS benchmark results for the full pipeline.
