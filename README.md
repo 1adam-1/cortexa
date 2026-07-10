@@ -69,12 +69,12 @@
 
 Create a `.env` file at the project root:
 
-*```env
+```env
 DATABASE_URL=postgresql-url
 JWT_SECRET_KEY=change-me
 GEMINI_API_KEY=your-gemini-api-key
 HF_API_TOKEN=your-huggingface-token
-```*
+```
 
 ### 2. Backend
 
