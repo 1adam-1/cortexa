@@ -1,6 +1,6 @@
 # Cortexa 🧠
 
-**An AI-powered study companion.** Upload your course materials, then chat with them, generate quizzes, summaries, practice sessions and slide decks — all backed by a local Retrieval-Augmented Generation (RAG) pipeline with built-in answer-quality evaluation.
+**An AI-powered study companion.** Upload your course materials, then chat with them, generate quizzes, summaries, practice sessions and slide decks  all backed by a local Retrieval-Augmented Generation (RAG) pipeline with built-in answer-quality evaluation.
 
 
 ---
