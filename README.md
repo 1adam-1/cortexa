@@ -130,3 +130,8 @@ Cortexa doesn't just answer it checks itself:
 
 - **Online:** after each chat answer, a background thread splits the answer into sentences and verifies each one is entailed by the retrieved context (NLI cross-encoder). The faithfulness score, entailment details and rerank scores are stored per generation.
 - **Offline:** `backend/evaluation/` contains a test set and RAGAS benchmark results for the full pipeline.
+
+** Simulation 
+
+https://github.com/user-attachments/assets/a4195c4e-ced2-446c-8749-77936057bc3a
+
