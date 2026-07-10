@@ -15,7 +15,7 @@ export function Navbar() {
             <div className={styles.inner}>
 
                 {/* Logo */}
-                <Link to="/" className={styles.brand} aria-label="Go to home">
+                <Link to="/Notebooks" className={styles.brand} aria-label="Go to home">
                     <img src={logoUrl} alt="Company logo" className={styles.logo} />
                 </Link>
 

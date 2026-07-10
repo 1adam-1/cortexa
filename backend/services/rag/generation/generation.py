@@ -21,7 +21,13 @@ Rules:
 - If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
 - Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
 - Be concise and objective.
-- Mention the source page number(s) in the context that support your answer, if it is available, in the format (Page X).
+- Format all responses using Markdown.
+- Use headings and lists only when they improve readability.
+- Keep short answers as plain Markdown paragraphs.
+- Answer ONLY the question asked. Do NOT add sections about other topics from the
+  context that the question did not ask about.
+- Never write a "Sources" or "Citation" section and never mention sources, chunks,
+  or page numbers. End your answer after the last point of content.
 """
 
 # QCM prompt
@@ -87,7 +93,8 @@ CRITICAL RULES:
 - Highlight the main concepts, findings, and arguments.
 - Do not invent or hallucinate information. You must rely strictly on the provided context.
 - Maintain a professional and objective tone.
-- Keep the summary well-structured, using bullet points for key takeaways if appropriate.
+- Format the summary in Markdown: '## ' for section headings, **bold** for key terms,
+  and '- ' bullet points for key takeaways.
 - If TARGET_LANGUAGE is provided, answer STRICTLY in that language.
 - Otherwise, detect the language of the QUESTION and answer STRICTLY in that same language.
 """
@@ -198,11 +205,17 @@ def build_context(items, tokenizer, question, type ,is_refused=False, budget_inp
     
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
+    # For Q/A, keep only the most relevant chunks: a wide context pushes the model
+    # to write about everything it sees instead of answering the question.
+    if type == "qa":
+        chunks = chunks[:5]
+
     context_part = []
     remaining_budget = budget_input - count_tokens(prompt, tokenizer)
     for i,chunk in enumerate(chunks, start =1):
-        page_number = getattr(chunk, "source_page", "N/A")
-        chunk_text = f"Chunk {i} (Page {page_number}): {chunk.content}\n"
+        # No "[Source N]" labels: the model copies them into its answer as a fake
+        # "Sources" section. Passages are separated by blank lines instead.
+        chunk_text = f"{chunk.content}\n"
         chunk_tokens = count_tokens(chunk_text, tokenizer)
 
         if chunk_tokens <= remaining_budget:
@@ -253,13 +266,38 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", i
 
 
     language_directive = ""
-    
+
     language_directive = _build_language_directive(kwargs.get("target_language_code"))
 
     system_content = SYSTEM_PROMPT
     if language_directive:
         system_content = f"{SYSTEM_PROMPT}\n{language_directive}\nYou MUST answer only in TARGET_LANGUAGE."
 
+
+    # Small models follow instructions placed at the END of the prompt far more
+    # reliably than rules buried in the system prompt — restate the ones that
+    # matter for each output type.
+    if type == "qcm" or type == "practice_evaluation":
+        json_start = "[" if type == "qcm" else "{"
+        end_directive = (
+            f"\n    CRITICAL: Output ONLY valid JSON. Start your response immediately with {json_start} — "
+            "no introduction, no explanations, no markdown code fences, and nothing after the JSON."
+        )
+    else:
+        end_directive = (
+            '\n    CRITICAL: Output the answer directly in TARGET_LANGUAGE if provided, otherwise use the '
+            'QUESTION language. Translate as needed. Do NOT introduce your answer (e.g., no "The answer is...").'
+        )
+        if type == "qa" and not is_refused:
+            end_directive += (
+                "\n    ANSWER the QUESTION directly, then STOP. Do NOT summarize the CONTEXT and do NOT write a section for each topic it contains."
+                "\n    SIZE: default to a short answer — one paragraph or a few bullet points. Use '## ' headings ONLY if the question itself asks for a list, steps, a comparison, or a detailed explanation."
+                "\n    Write in Markdown (use **bold** for key terms)."
+                "\n    Never write a 'Sources' or 'Citation' section and never mention sources or page numbers. End after the last point of content."
+            )
+
+    # CONTEXT first, QUESTION last: with the question at the top, small models
+    # "lose" it behind the context and drift into summarizing everything they read.
     language_block = f"{language_directive}\n\n" if language_directive else ""
     messages = [
         {
@@ -268,13 +306,12 @@ def generate_answer(context, question, tokenizer, generation_model, type="qa", i
         },
         {
             "role": "user",
-            "content": f"""QUESTION:
-    {question}
-
-    {language_block}CONTEXT:
+            "content": f"""{language_block}CONTEXT:
     {context}
 
-    CRITICAL: Output the answer directly in TARGET_LANGUAGE if provided, otherwise use the QUESTION language. Translate as needed. Do NOT introduce your answer (e.g., no "The answer is...").
+    QUESTION:
+    {question}
+{end_directive}
         """
         }]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)

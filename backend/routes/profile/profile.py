@@ -26,13 +26,14 @@ def get_profile():
 @jwt_required()
 def update_profile():
     current_user_id = int(get_jwt_identity())
-    data = request.get_json()
-    
-    updated_user = update_user_profile(current_user_id, data)
-    
-    if not updated_user:
-        return {"message": "User not found"}, 404
-    
+    data = request.get_json() or {}
+
+    updated_user, error = update_user_profile(current_user_id, data)
+
+    if error:
+        message, status_code = error
+        return {"message": message}, status_code
+
     return {
         "message": "Profile updated successfully",
         "user": {

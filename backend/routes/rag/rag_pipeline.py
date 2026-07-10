@@ -11,6 +11,7 @@ from services.rag.retrieval.retrieval import retrieve_top_chunks, retrieve_top_c
 from entities.models import Document, Etudiant
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.evaluation.evaluation import evaluate_generation
+from services.settings.settings import get_or_create_settings
 from services.rag.ingestion.load_model import load_generation_model, load_embedding_models
 from services.rag.ingestion.embedding import  save_index
 from services.rag.generation.presentation import generate_presentation
@@ -55,6 +56,21 @@ def retrieve_concepts_for_session(query, session_id, embedding_model, k_per_clus
                 threshold=threshold,
             )
         )
+
+    return retrieved
+
+
+def retrieve_chunks_for_documents(query, documents, embedding_model):
+    retrieved = []
+    for document in documents:
+        index_path = f"./uploads/index_{document.id}.faiss"
+        # Document uploaded but not (yet) processed: no index on disk, skip it
+        if not os.path.exists(index_path):
+            continue
+
+        index = faiss.read_index(index_path)
+        chunks = Chunk.query.filter_by(id_document=document.id).all()
+        retrieved.extend(retrieve_top_chunks(query, chunks, index, embedding_model))
 
     return retrieved
 
@@ -183,16 +199,14 @@ def user_chat():
     if not session_obj or session_obj.id_etudiant != current_user_id:
         return jsonify({"message": "Access denied"}), 403
 
+    user_settings = get_or_create_settings(current_user_id)
+    response_length = user_settings.response_length
+
     documents = Document.query.filter_by(id_session=session_id).all()
     if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    final_retrieved_chunks=[]
-    for document in documents:
-        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-        chunks = Chunk.query.filter_by(id_document=document.id).all()
-        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
-        final_retrieved_chunks.extend(retrievd_chunks)
+    final_retrieved_chunks = retrieve_chunks_for_documents(question, documents, embedding_model)
 
     concepts = Concept.query.join(Cluster).filter(Cluster.id_session == session_id).all()
     all_candidates = final_retrieved_chunks + concepts
@@ -229,10 +243,21 @@ def user_chat():
             "rerank_score": getattr(item, "rerank_score", 0.0)
         })
 
+    # Pages of the top retrieved chunks — appended as a fallback if the model doesn't cite any
+    source_pages = []
+    if not is_refused:
+        for item in reranked_items:
+            if hasattr(item, "content"):
+                page_label = _format_page_label(getattr(item, "source_page", None))
+                if page_label and page_label not in source_pages:
+                    source_pages.append(page_label)
+            if len(source_pages) >= 3:
+                break
+
     def generate():
         full_answer = ""
         try:
-            for chunk in generate_answer(
+            answer_stream = generate_answer(
                 context,
                 question,
                 tokenizer,
@@ -240,9 +265,20 @@ def user_chat():
                 is_refused=is_refused,
                 type="qa",
                 target_language_code=output_language,
-            ):
+                response_length=response_length,
+            )
+            # strip_source_lines cuts any "Sources:"/"Source 1" block the model
+            # writes on its own — the real footer is appended below
+            for chunk in strip_source_lines(answer_stream):
                 full_answer += chunk
-                yield f"data: {chunk}\n\n"
+                yield f"data: {json.dumps(chunk)}\n\n"
+
+            # Always append the sources footer — the model is instructed not to cite,
+            # so this is the single, deterministic place pages are shown.
+            if not is_refused and source_pages:
+                sources_note = f"\n\n**Sources:** {' · '.join(source_pages)}"
+                full_answer += sources_note
+                yield f"data: {json.dumps(sources_note)}\n\n"
 
         except GeneratorExit:
             print("Stream closed by client")
@@ -320,15 +356,12 @@ def generate_qcm():
     if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    final_retrieved_chunks=[]
-    for document in documents:
-        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-        chunks = Chunk.query.filter_by(id_document=document.id).all()
-        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
-        final_retrieved_chunks.extend(retrievd_chunks)
+    final_retrieved_chunks = retrieve_chunks_for_documents(question, documents, embedding_model)
 
     retrieved_concepts = retrieve_concepts_for_session(question, session_id, embedding_model)
     all_candidates = final_retrieved_chunks + retrieved_concepts
+    if not all_candidates:
+        return jsonify({"message": "No processed document found for this session. Please process a document first."}), 400
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, question, type="qcm", num_questions=num_questions, difficulty=difficulty)
@@ -340,6 +373,7 @@ def generate_qcm():
     parsed_qcm = extract_json_from_llama_response(qcm_raw_output)
 
     if not parsed_qcm:
+       print(f"QCM JSON parse failed. Raw output:\n{qcm_raw_output[:1000]}")
        return jsonify({"message": "Failed to generate valid QCM format", "raw": qcm_raw_output}), 500
 
     new_generation = Generation(
@@ -397,14 +431,9 @@ def generate_practice_question():
     if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    final_retrieved_chunks=[]
-    for document in documents:
-        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-        chunks = Chunk.query.filter_by(id_document=document.id).all()
-        retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
-        final_retrieved_chunks.extend(retrievd_chunks)
-
-    all_candidates = final_retrieved_chunks
+    all_candidates = retrieve_chunks_for_documents(topic, documents, embedding_model)
+    if not all_candidates:
+        return jsonify({"message": "No processed document found for this session. Please process a document first."}), 400
 
     reranked_items = rerank_unified(topic, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, topic, type="practice_question")
@@ -471,14 +500,9 @@ def evaluate_practice_answer():
     if not documents:
         return jsonify({"message": "No document found for this session"}), 404
 
-    final_retrieved_chunks=[]
-    for document in documents:
-        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-        chunks = Chunk.query.filter_by(id_document=document.id).all()
-        retrievd_chunks = retrieve_top_chunks(question, chunks, index, embedding_model)
-        final_retrieved_chunks.extend(retrievd_chunks)
-
-    all_candidates = final_retrieved_chunks
+    all_candidates = retrieve_chunks_for_documents(question, documents, embedding_model)
+    if not all_candidates:
+        return jsonify({"message": "No processed document found for this session. Please process a document first."}), 400
 
     reranked_items = rerank_unified(question, all_candidates, reranker)
     
@@ -493,6 +517,7 @@ def evaluate_practice_answer():
     parsed_eval = extract_json_from_llama_response(eval_raw_output)
 
     if not parsed_eval:
+       print(f"Practice evaluation JSON parse failed. Raw output:\n{eval_raw_output[:1000]}")
        return jsonify({"message": "Failed to generate valid evaluation format", "raw": eval_raw_output}), 500
 
     new_generation = Generation(
@@ -549,15 +574,13 @@ def generate_summary():
     if not documents:
         return jsonify({"message": "No document found for this session"}), 404
     
-    final_retrieved_chunks=[]
-    for document in documents:
-        index = faiss.read_index(f"./uploads/index_{document.id}.faiss")
-        chunks = Chunk.query.filter_by(id_document=document.id).all()
-        retrievd_chunks = retrieve_top_chunks(topic, chunks, index, embedding_model)
-        final_retrieved_chunks.extend(retrievd_chunks)
-    
+    final_retrieved_chunks = retrieve_chunks_for_documents(topic, documents, embedding_model)
+
     retrieved_concepts = retrieve_concepts_for_session(topic, session_id, embedding_model)
     all_candidates = final_retrieved_chunks + retrieved_concepts
+    if not all_candidates:
+        return jsonify({"message": "No processed document found for this session. Please process a document first."}), 400
+
     reranked_items = rerank_unified(topic, all_candidates, reranker)
     context = build_context(reranked_items, tokenizer, topic, type="summary", target_language_code=output_language)
 
@@ -608,6 +631,11 @@ def generate_summary():
 @pipeline_rag_bp.route("/api/generation/qcm/<int:session_id>", methods=["GET"])
 @jwt_required()
 def get_qcm_generation(session_id):
+    current_user_id = int(get_jwt_identity())
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
     generations = db.session.query(Generation).filter_by(id_session=session_id, type="QCM").order_by(Generation.created_at.desc()).all()
 
     if not generations:
@@ -663,6 +691,11 @@ def get_chat_history(session_id):
 @pipeline_rag_bp.route("/api/generation/summary/<int:session_id>", methods=["GET"])
 @jwt_required()
 def get_summaries(session_id):
+    current_user_id = int(get_jwt_identity())
+    session_obj = Session.query.get(session_id)
+    if not session_obj or session_obj.id_etudiant != current_user_id:
+        return jsonify({"message": "Access denied"}), 403
+
     generations =  db.session.query(Generation).filter_by(id_session=session_id, type="Summary").order_by(Generation.created_at.desc()).all()
     if not generations:
         return jsonify({"summaries": []}), 200

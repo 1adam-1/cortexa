@@ -27,7 +27,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=300, min_to
                                     content="\n".join(current_chunk),
                                     type=types,
                                     token_count=current_token,
-                                    source_page=pages)
+                                    source_page=", ".join(map(str, pages)) if pages else None)
 
                     db.session.add(new_chunk)
                     db.session.commit()
@@ -49,7 +49,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=300, min_to
                                 content=item,
                                 type=types,
                                 token_count=token_length,
-                                source_page=pages)
+                                source_page=", ".join(map(str, pages)) if pages else None)
 
                 db.session.add(new_chunk)
                 db.session.commit()
@@ -76,7 +76,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=300, min_to
                                     content="\n".join(current_chunk),
                                     type=types,
                                     token_count=current_token,
-                                    source_page=pages)
+                                    source_page=", ".join(map(str, pages)) if pages else None)
 
                     db.session.add(new_chunk)
                     db.session.commit()
@@ -103,7 +103,7 @@ def chunk_text_by_tokens(document_id,sections, tokenizer, max_tokens=300, min_to
                             content="\n".join(current_chunk),
                             type=types,
                             token_count=current_token,
-                            source_page=pages)
+                            source_page=", ".join(map(str, pages)) if pages else None)
 
             db.session.add(new_chunk)
             db.session.commit()

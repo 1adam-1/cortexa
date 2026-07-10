@@ -6,6 +6,7 @@ import Notebook from "./components/Notebook/Notebook.jsx";
 import Auth from "./components/auth/Auth.jsx";
 import EvaluationPage from "./components/evaluation/EvaluationPage.jsx";
 import Profile from "./components/profile/Profile.jsx";
+import Settings from "./components/settings/Settings.jsx";
 
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 
@@ -50,6 +51,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />

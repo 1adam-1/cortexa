@@ -1,6 +1,7 @@
 from unstructured.partition.auto import partition
 import os
 import tempfile
+import uuid
 from werkzeug.utils import secure_filename
 from unstructured.documents.elements import Title, NarrativeText, ListItem, Table, Image as UnstructuredImage
 import logging
@@ -24,9 +25,9 @@ def save_file(file, etudiant, id_session=None):
         db.session.add(session)
         db.session.commit()
 
-    #save the file
+    #save the file under a unique name so uploads with the same filename never overwrite each other
     filename=secure_filename(file.filename)
-    filepath=os.path.join(UPLOAD_FOLDER, filename)
+    filepath=os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{filename}")
     file.save(filepath)
 
      #create a new document for the session

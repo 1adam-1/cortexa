@@ -485,22 +485,24 @@ export default function Notebook() {
              // 2. Read the stream
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = "";
         let fullContent = "";
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value);
-            // Flask sends "data: text\n\n", so we need to clean it
-            const lines = chunk.split("\n");
-            
-            lines.forEach(line => {
-                if (line.startsWith("data: ")) {
-                    const content = line.replace("data: ", "");
-                    fullContent += content;
+            buffer += decoder.decode(value, { stream: true });
+            // Flask sends "data: <json>\n\n" frames; keep any incomplete frame in the buffer
+            const frames = buffer.split("\n\n");
+            buffer = frames.pop();
+
+            frames.forEach(frame => {
+                if (frame.startsWith("data: ")) {
+                    // JSON-decode to restore newlines so markdown renders while streaming
+                    fullContent += JSON.parse(frame.slice(6));
                     // 3. Update the specific message in the state
-                    setMessages(prev => prev.map(msg => 
+                    setMessages(prev => prev.map(msg =>
                         msg.id === assistantMsg.id
-                            ? { ...msg, content: fullContent } 
+                            ? { ...msg, content: fullContent }
                             : msg
                     ));
                 }
@@ -952,7 +954,7 @@ const handleStop = () => {
                                 <h3>Document Summary</h3>
                             </div>
                             <div className={classes.qcmList} style={{ padding: "20px", overflowY: "auto" }}>
-                                <div style={{ lineHeight: "1.6" }}>
+                                <div className={classes.messageContent} style={{ lineHeight: "1.6" }}>
                                     <ReactMarkdown>{summaryData}</ReactMarkdown>
                                 </div>
                             </div>
@@ -1003,6 +1005,7 @@ const handleStop = () => {
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
+                            flexShrink: 0,
                             borderRadius: '12px',
                             overflow: 'hidden',
                             background: '#1a1a2e'
@@ -1012,14 +1015,14 @@ const handleStop = () => {
                             <img
                                 src={`data:image/png;base64,${slide.image_b64}`}
                                 alt={slide?.title || ''}
-                                style={{ width: '100%', height: '55%', objectFit: 'cover' }}
+                                style={{ width: '100%', height: '220px', objectFit: 'cover' }}
                             />
                         ) : (
-                            <div style={{ width: '100%', height: '55%', background: '#2b2b3d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                            <div style={{ width: '100%', height: '220px', background: '#2b2b3d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
                                 No image available
                             </div>
                         )}
-                        <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+                        <div style={{ padding: '20px' }}>
                             <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.2rem' }}>
                                 {index + 1}. {slide?.title}
                             </h3>

@@ -15,6 +15,25 @@ class Etudiant(db.Model):
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class User_settings(db.Model):
+    __tablename__ = "user_settings"
+
+    id=db.Column(db.Integer, primary_key=True)
+    id_etudiant=db.Column(db.Integer, ForeignKey("etudiant.id", ondelete='CASCADE'), nullable=False, unique=True)
+    theme=db.Column(db.String(20), nullable=False, default="light")
+    font_size=db.Column(db.String(20), nullable=False, default="medium")
+    response_length=db.Column(db.String(20), nullable=False, default="balanced")
+    updated_at=db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    etudiant=db.relationship("Etudiant", backref=db.backref("settings", uselist=False, cascade="all, delete-orphan"))
+
+    def to_dict(self):
+        return {
+            "theme": self.theme,
+            "font_size": self.font_size,
+            "response_length": self.response_length,
+        }
+
+
 class Session(db.Model):
     __tablename__ = "session"
 

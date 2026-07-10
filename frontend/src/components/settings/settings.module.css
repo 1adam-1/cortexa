@@ -1,0 +1,270 @@
+/* ── Shell & Page ─────────────────────────────────────── */
+
+.shell {
+  min-height: 100vh;
+  background-color: var(--background);
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.page {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+/* ── Sections ─────────────────────────────────────────── */
+
+.section {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.rowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rowLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.rowDesc {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+/* ── Segmented control ────────────────────────────────── */
+
+.segmented {
+  display: inline-flex;
+  background-color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.segment:hover {
+  color: var(--foreground);
+}
+
+.segmentActive {
+  background-color: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Option cards (response length) ───────────────────── */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.optionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.optionCard:hover {
+  border-color: var(--ring);
+}
+
+.optionCardActive {
+  border-color: var(--primary);
+  background-color: var(--accent);
+}
+
+.optionLabel {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.optionDesc {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.35;
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+
+.btnGhost {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.btnGhost:hover {
+  border-color: var(--ring);
+}
+
+.btnDanger {
+  background: transparent;
+  color: var(--destructive);
+  border: 1px solid var(--destructive);
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.btnDanger:hover {
+  background-color: var(--destructive);
+  color: #fff;
+}
+
+.btnDangerConfirm {
+  background-color: var(--destructive);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnDangerConfirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirmRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.confirmText {
+  font-size: 0.8rem;
+  color: var(--destructive);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Toast / Feedback ─────────────────────────────────── */
+
+.toast {
+  padding: 0.75rem 1rem;
+  background-color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--foreground);
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+.toastError {
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in srgb, var(--destructive) 8%, transparent);
+  border: 1px solid var(--destructive);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--destructive);
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
