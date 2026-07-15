@@ -57,7 +57,7 @@
 |---|---|
 | Frontend | React 19, Vite, Tailwind CSS 4, shadcn/ui, React Router, react-markdown |
 | Backend | Flask, Flask-JWT-Extended, SQLAlchemy, Gunicorn |
-| RAG / ML | PyTorch, Transformers, sentence-transformers, FAISS, HDBSCAN, unstructured, pytesseract, LangChain, RAGAS |
+| RAG / ML | PyTorch, Transformers, sentence-transformers, FAISS, HDBSCAN, unstructured, pytesseract, RAGAS |
 | Database | PostgreSQL 16 |
 | Infra | Docker & Docker Compose (GPU-enabled backend) |
 
